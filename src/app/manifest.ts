@@ -4,11 +4,11 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "WE-estate",
     short_name: "WE-estate",
-    description: "Project control for M Squared Developments",
+    description: "Project control for real-estate developers",
     start_url: "/",
     display: "standalone",
-    background_color: "#eef1f6",
-    theme_color: "#1a3a8f",
+    background_color: "#f5f0e6",
+    theme_color: "#f5f0e6",
     icons: [
       { src: "/weestate-app-icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],

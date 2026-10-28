@@ -19,7 +19,7 @@ export default async function Overview() {
     <>
       <div className="we-pagehead">
         <div>
-          <div className="we-eyebrow">M Squared Developments</div>
+          <div className="we-eyebrow">All projects</div>
           <h1>Overview</h1>
         </div>
         <Link className="we-btn we-btn--primary" href="/certificates/new">New payment certificate</Link>

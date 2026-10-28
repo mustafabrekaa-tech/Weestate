@@ -20,11 +20,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <>
       <header className="we-appbar">
-        <label className="we-menu-toggle we-btn we-btn--sm" htmlFor="we-menu" style={{ color: "inherit" }}>Menu</label>
+        <label className="we-menu-toggle we-btn we-btn--secondary we-btn--sm" htmlFor="we-menu">Menu</label>
         <Link href="/">
-          <img src="/weestate-lockup-reverse.svg" alt="WE-estate" />
+          <img className="we-logo-light" src="/weestate-horizontal.svg" alt="WE-estate" />
+          <img className="we-logo-dark" src="/weestate-horizontal-reverse.svg" alt="WE-estate" />
         </Link>
-        <span className="we-appbar__project">M Squared Developments</span>
+        <span className="we-appbar__project">Projects</span>
         <span className="we-appbar__spacer" />
         <form action="/auth/signout" method="post">
           <button className="we-link">Sign out</button>
