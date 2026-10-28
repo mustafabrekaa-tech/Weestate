@@ -12,7 +12,7 @@ Live at **weestate.app** (once deployed).
 - **Department queues** and **Waiting on me**, sorted overdue first, with "With Finance · 2 days" and "Overdue · 6 days" computed from due dates.
 - **Project page**: phases with latest progress, units by status, contracts.
 - **People and departments** (admins): give each person a department.
-- Brand: WE-estate design system (gold skyline logo; Cinzel, Jost, IBM Plex Sans Arabic, IBM Plex Mono; ivory `#f5f0e6`, bronze `#8a6420`, gold `#c9a24e`), light and dark mode, works on phones and installs as an app.
+- Brand: WE-estate design system (gold skyline logo; Cinzel, Jost, IBM Plex Sans Arabic, IBM Plex Mono; white `#ffffff`, off-white `#faf8f3`, gold `#c9a24e` with bronze `#8a6420` for gold text), light only, works on phones and installs as an app.
 - M Squared Developments is the first company using it; the sample data is its TRIO Gardens project.
 
 ## Stack

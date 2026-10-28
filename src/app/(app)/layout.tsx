@@ -22,8 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="we-appbar">
         <label className="we-menu-toggle we-btn we-btn--secondary we-btn--sm" htmlFor="we-menu">Menu</label>
         <Link href="/">
-          <img className="we-logo-light" src="/weestate-horizontal.svg" alt="WE-estate" />
-          <img className="we-logo-dark" src="/weestate-horizontal-reverse.svg" alt="WE-estate" />
+          <img src="/weestate-horizontal.svg" alt="WE-estate" />
         </Link>
         <span className="we-appbar__project">Projects</span>
         <span className="we-appbar__spacer" />
