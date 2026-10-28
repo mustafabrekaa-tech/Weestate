@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ItemStatus } from "@/components/StatusChip";
 import { money } from "@/lib/format";
 import type { QueueItem } from "@/lib/data";
+import { docHref } from "@/lib/docs";
 
 export function QueueTable({
   items,
@@ -29,12 +30,12 @@ export function QueueTable({
         </thead>
         <tbody>
           {items.map((q) => (
-            <tr key={q.doc_id}>
+            <tr key={q.doc_type + q.doc_id}>
               <td>
                 <span className="we-code">{q.ref}</span>
               </td>
               <td>
-                <Link className="we-rowlink" href={`/certificates/${q.doc_id}`}>
+                <Link className="we-rowlink" href={docHref(q.doc_type, q.doc_id)}>
                   <div className="we-title">{q.title}</div>
                 </Link>
                 <div className="we-meta">

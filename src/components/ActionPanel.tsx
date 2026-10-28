@@ -1,22 +1,25 @@
 "use client";
 
 import { useActionState } from "react";
-import { certificateAction } from "../actions";
+import type { ActionResult } from "@/lib/data";
 
 export function ActionPanel({
-  id,
+  action,
   forwardLabel,
   canReturn,
+  note,
 }: {
-  id: string;
+  action: (prev: ActionResult, form: FormData) => Promise<ActionResult>;
   forwardLabel: string;
   canReturn: boolean;
+  note?: string;
 }) {
-  const [error, action, pending] = useActionState(certificateAction.bind(null, id), null);
+  const [state, formAction, pending] = useActionState(action, null);
   return (
-    <form action={action} className="we-card we-actions">
+    <form action={formAction} className="we-card we-actions">
       <h2 style={{ margin: 0 }}>Your turn</h2>
-      {error && <div className="we-banner we-banner--error" role="alert">{error}</div>}
+      {note && <span className="we-help">{note}</span>}
+      {state?.error && <div className="we-banner we-banner--error" role="alert">{state.error}</div>}
       <div className="we-field">
         <label htmlFor="comment">Comment</label>
         <textarea id="comment" name="comment" className="we-input" placeholder="Needed when you return or reject it" />

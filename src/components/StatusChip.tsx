@@ -46,10 +46,11 @@ export function ItemStatus({
   myDepartment?: string | null;
 }) {
   if (status === "paid") return <StatusChip kind="done">Paid</StatusChip>;
+  if (status === "done") return <StatusChip kind="done">Done</StatusChip>;
   if (status === "rejected") return <StatusChip kind="overdue">Rejected</StatusChip>;
   if (status === "draft") return <StatusChip kind="draft">Draft</StatusChip>;
   if (overdue) return <StatusChip kind="overdue">Overdue · {days(daysWaiting ?? 0)}</StatusChip>;
-  if (status === "returned") return <StatusChip kind="overdue">Returned to site</StatusChip>;
+  if (status === "returned") return <StatusChip kind="overdue">Returned for changes</StatusChip>;
   if (myDepartment && department === myDepartment) return <StatusChip kind="active">Your turn</StatusChip>;
   return (
     <StatusChip kind="waiting">

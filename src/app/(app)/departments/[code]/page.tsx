@@ -9,7 +9,7 @@ export default async function DepartmentPage({ params }: { params: Promise<{ cod
   const me = await getMe();
   const [{ data: dept }, { data }] = await Promise.all([
     supabase.from("departments").select("*").eq("code", code).maybeSingle(),
-    supabase.from("work_queue").select("*").eq("department", code),
+    supabase.from("work_queue").select("*").eq("department", code).eq("company_id", me?.company_id ?? ""),
   ]);
   if (!dept) notFound();
   const items = sortQueue((data ?? []) as QueueItem[]);

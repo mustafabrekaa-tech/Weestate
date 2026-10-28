@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Kpis, type ProjectStatus } from "@/components/Kpis";
 import { QueueTable } from "@/components/QueueTable";
+import { SiteMap } from "@/components/SiteMap";
 import { getMe, sortQueue, type QueueItem } from "@/lib/data";
 import { date } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -9,11 +10,23 @@ export default async function Overview() {
   const supabase = await createClient();
   const me = await getMe();
   const [{ data: projects }, { data: queue }] = await Promise.all([
-    supabase.from("project_status").select("*").order("name"),
-    supabase.from("work_queue").select("*"),
+    supabase.from("project_status").select("*").eq("company_id", me?.company_id ?? "").order("name"),
+    supabase.from("work_queue").select("*").eq("company_id", me?.company_id ?? ""),
   ]);
+  const list = (projects ?? []) as ProjectStatus[];
   const items = sortQueue((queue ?? []) as QueueItem[]);
   const late = items.filter((q) => q.overdue);
+  const pins = list
+    .filter((p) => p.lat != null && p.lng != null)
+    .map((p) => ({
+      id: p.id,
+      lat: p.lat!,
+      lng: p.lng!,
+      label: p.name,
+      sub: `SPI ${p.spi ?? "–"} · CPI ${p.cpi ?? "–"} · ${p.unit_count} units`,
+      href: `/projects/${p.id}`,
+    }));
+  const canSetup = me?.is_admin || ["pm", "cost_control"].includes(me?.department ?? "");
 
   return (
     <>
@@ -22,10 +35,18 @@ export default async function Overview() {
           <div className="we-eyebrow">All projects</div>
           <h1>Overview</h1>
         </div>
-        <Link className="we-btn we-btn--primary" href="/certificates/new">New payment certificate</Link>
+        {canSetup && <Link className="we-btn we-btn--primary" href="/projects/new">New project</Link>}
       </div>
 
-      {((projects ?? []) as ProjectStatus[]).map((p) => (
+      {list.length === 0 ? (
+        <div className="we-card we-empty">
+          No projects yet.{canSetup && <> <Link href="/projects/new">Set up the first one</Link>; it takes a few minutes.</>}
+        </div>
+      ) : (
+        <SiteMap pins={pins} height={380} />
+      )}
+
+      {list.map((p) => (
         <section key={p.id} className="we-stack">
           <div className="we-pagehead">
             <div>

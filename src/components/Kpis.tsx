@@ -1,4 +1,4 @@
-import { index2, pct } from "@/lib/format";
+import { index2, money, pct } from "@/lib/format";
 
 export type ProjectStatus = {
   id: string;
@@ -14,9 +14,21 @@ export type ProjectStatus = {
   cpi: number | null;
   overdue_count: number;
   open_count: number;
+  status?: string;
+  lat?: number | null;
+  lng?: number | null;
+  map_zoom?: number;
+  budget_egp?: number;
+  bac_egp?: number | null;
+  pv_egp?: number | null;
+  ev_egp?: number | null;
+  ac_egp?: number | null;
+  eac_egp?: number | null;
 };
 
-export function Kpis({ p }: { p: ProjectStatus }) {
+const millions = (n: number | null | undefined) => (n == null ? "–" : `${money(Number(n) / 1e6)}M`);
+
+export function Kpis({ p, full = false }: { p: ProjectStatus; full?: boolean }) {
   return (
     <div className="we-kpis">
       <div className="we-kpi">
@@ -38,11 +50,37 @@ export function Kpis({ p }: { p: ProjectStatus }) {
           {p.cpi == null ? "No costs yet" : p.cpi < 1 ? "Over budget" : "Under budget"}
         </span>
       </div>
+      {full && (
+        <>
+          <div className="we-kpi">
+            <span className="we-kpi__label">Earned value</span>
+            <span className="we-kpi__value">{millions(p.ev_egp)}</span>
+            <span className="we-kpi__note">Planned {millions(p.pv_egp)} · actual cost {millions(p.ac_egp)}</span>
+          </div>
+          <div className="we-kpi">
+            <span className="we-kpi__label">Forecast at completion</span>
+            <span className="we-kpi__value">{millions(p.eac_egp)}</span>
+            <span className={`we-kpi__note ${p.eac_egp != null && p.bac_egp != null && p.eac_egp > p.bac_egp ? "is-bad" : ""}`}>
+              Budget {millions(p.bac_egp)} EGP
+            </span>
+          </div>
+        </>
+      )}
       <div className="we-kpi">
         <span className="we-kpi__label">Overdue</span>
         <span className="we-kpi__value">{p.overdue_count}</span>
         <span className={`we-kpi__note ${p.overdue_count > 0 ? "is-bad" : ""}`}>of {p.open_count} open items</span>
       </div>
+    </div>
+  );
+}
+
+export function Kpi({ label, value, note, bad }: { label: string; value: string; note?: string; bad?: boolean }) {
+  return (
+    <div className="we-kpi">
+      <span className="we-kpi__label">{label}</span>
+      <span className="we-kpi__value">{value}</span>
+      {note && <span className={`we-kpi__note${bad ? " is-bad" : ""}`}>{note}</span>}
     </div>
   );
 }

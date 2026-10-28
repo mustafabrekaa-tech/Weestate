@@ -9,7 +9,7 @@ export default async function MyWork() {
   const me = await getMe();
   const supabase = await createClient();
   const { data } = me?.department
-    ? await supabase.from("work_queue").select("*").eq("department", me.department)
+    ? await supabase.from("work_queue").select("*").eq("department", me.department).eq("company_id", me.company_id ?? "")
     : { data: [] };
   const items = sortQueue((data ?? []) as QueueItem[]);
   return (

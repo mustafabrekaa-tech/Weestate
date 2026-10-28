@@ -16,7 +16,7 @@ export function WorkflowSteps({
   return (
     <ol className="we-steps" style={{ ["--n" as string]: steps.length }} aria-label={label}>
       {steps.map((s) => {
-        const finished = status === "paid" || s.seq < current;
+        const finished = status === "paid" || status === "done" || s.seq < current;
         const cls = finished
           ? "we-step--done"
           : s.seq === current
