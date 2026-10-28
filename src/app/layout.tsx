@@ -1,9 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Cinzel, IBM_Plex_Mono, IBM_Plex_Sans_Arabic, Jost } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Sans_Arabic, Saira_Semi_Condensed } from "next/font/google";
 import "./globals.css";
 
-const jost = Jost({ subsets: ["latin"], weight: ["300", "400", "500", "600"], variable: "--font-jost" });
-const cinzel = Cinzel({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-cinzel" });
+const plex = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-plex" });
+const saira = Saira_Semi_Condensed({ subsets: ["latin"], weight: ["600", "700"], variable: "--font-saira" });
 const plexAr = IBM_Plex_Sans_Arabic({ subsets: ["arabic"], weight: ["400", "600", "700"], variable: "--font-plex-ar" });
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono" });
 
@@ -15,12 +15,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#faf8f3",
+  themeColor: "#f7f6f3",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${jost.variable} ${cinzel.variable} ${plexAr.variable} ${plexMono.variable}`}>
+    <html lang="en" className={`${plex.variable} ${saira.variable} ${plexAr.variable} ${plexMono.variable}`}>
       <body className="we-root">{children}</body>
     </html>
   );

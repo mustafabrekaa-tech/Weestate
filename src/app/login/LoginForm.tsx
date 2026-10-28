@@ -8,7 +8,7 @@ export function LoginForm() {
   return (
     <form action={action} className="we-stack">
       <div>
-        <h2 style={{ font: "600 24px/32px var(--font-display)", letterSpacing: ".06em", margin: 0 }}>Sign in</h2>
+        <h2 style={{ font: "700 26px/32px var(--font-display)", letterSpacing: ".01em", margin: 0 }}>Sign in</h2>
         <p className="we-help" style={{ margin: "4px 0 0" }}>Use your company account.</p>
       </div>
       {error && <div className="we-banner we-banner--error" role="alert">{error}</div>}
