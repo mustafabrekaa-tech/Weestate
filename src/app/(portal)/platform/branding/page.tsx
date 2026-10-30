@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/ActionForm";
+import { PortalHead } from "@/components/PortalHead";
 import { LogoUpload } from "@/components/LogoUpload";
 import { createClient } from "@/lib/supabase/server";
 import { savePlatform } from "../actions";
@@ -11,6 +12,7 @@ export default async function PlatformBranding() {
   const { data: p } = await supabase.from("platform_settings").select("*").single();
   return (
     <>
+      <PortalHead title="App branding" />
       <p className="we-help" style={{ margin: 0 }}>
         How the app looks on {p?.root_domain} and for companies that haven&apos;t set their own branding. A company&apos;s own logo and colour win on its own address.
       </p>

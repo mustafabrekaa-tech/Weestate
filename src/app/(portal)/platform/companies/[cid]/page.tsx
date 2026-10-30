@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { getBrand } from "@/lib/brand";
 import { date } from "@/lib/format";
-import { DOMAIN_STATE, PLANS, STATUS, type Workspace } from "@/lib/portal";
+import { DOMAIN_STATE, STATUS, type Workspace } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import { checkAddress, saveAddress, saveShortName, saveWorkspace, staffResetMfa, staffResetPassword } from "../../actions";
 
@@ -15,10 +15,11 @@ type Person = { id: string; email: string; full_name: string; department: string
 export default async function CompanyPage({ params }: { params: Promise<{ cid: string }> }) {
   const { cid } = await params;
   const supabase = await createClient();
-  const [{ data }, { data: people }, brand] = await Promise.all([
+  const [{ data }, { data: people }, brand, { data: plans }] = await Promise.all([
     supabase.rpc("portal_companies"),
     supabase.rpc("portal_people", { p_company: cid }),
     getBrand(),
+    supabase.from("plans").select("code, name").order("sort"),
   ]);
   const w = ((data ?? []) as Workspace[]).find((x) => x.id === cid);
   if (!w) notFound();
@@ -31,7 +32,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ cid: s
         <div className="we-row">
           {w.logo_url ? <img src={w.logo_url} alt="" className="we-logo-preview" style={{ maxHeight: 40 }} /> : null}
           <div>
-            <Link className="we-link" href="/platform">All companies</Link>
+            <Link className="we-link" href="/platform/companies">All companies</Link>
             <h2 style={{ margin: 0 }}>{w.name} <span className={`we-chip ${STATUS[w.status]?.chip ?? ""}`}>{STATUS[w.status]?.label}</span></h2>
             <span className="we-help">{w.people} people · {w.projects} projects · {w.units.toLocaleString("en-US")} units · since {date(w.created_at)}</span>
           </div>
@@ -54,7 +55,7 @@ export default async function CompanyPage({ params }: { params: Promise<{ cid: s
               <div className="we-field">
                 <label htmlFor="plan">Plan</label>
                 <select id="plan" name="plan" defaultValue={w.plan} className="we-input we-select">
-                  {Object.entries(PLANS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  {(plans ?? []).map((pl) => <option key={pl.code} value={pl.code}>{pl.name}</option>)}
                 </select>
               </div>
               <div className="we-field"><label htmlFor="max_users">People limit</label><input id="max_users" name="max_users" defaultValue={w.max_users ?? ""} className="we-input we-mono" inputMode="numeric" placeholder="No limit" /></div>

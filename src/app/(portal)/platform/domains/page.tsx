@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
+import { PortalHead } from "@/components/PortalHead";
 import { getBrand } from "@/lib/brand";
 import { DOMAIN_STATE, type Workspace } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +15,8 @@ export default async function Domains() {
   const [{ data }, brand] = await Promise.all([supabase.rpc("portal_companies"), getBrand()]);
   const rows = (data ?? []) as Workspace[];
   return (
+    <>
+    <PortalHead title="Web addresses" lead="Each company's address on the platform and any domain of its own." />
     <div className="we-grid we-grid--side">
       <section className="we-stack">
         <div className="we-table-wrap">
@@ -44,5 +47,6 @@ export default async function Domains() {
         {!vercelReady() && <div className="we-banner we-banner--info">Automatic connecting starts once a Vercel token is saved as VERCEL_TOKEN.</div>}
       </section>
     </div>
+    </>
   );
 }

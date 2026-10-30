@@ -121,3 +121,35 @@ export async function staffResetMfa(userId: string, _: ActionResult): Promise<Ac
   revalidatePath("/platform", "layout");
   return { ok: "Authenticator reset." };
 }
+
+export async function savePlan(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const code = s(form, "code").toLowerCase();
+  if (!/^[a-z0-9-]{2,30}$/.test(code)) return { error: "Code: 2 to 30 lowercase letters, numbers or dashes." };
+  const int = (k: string) => (s(form, k) ? Math.max(0, Math.round(Number(s(form, k)))) : null);
+  const { error } = await supabase.from("plans").upsert({
+    code,
+    name: s(form, "name") || code,
+    price_egp: Number(s(form, "price_egp").replace(/[,\s]/g, "") || 0),
+    max_users: int("max_users"),
+    max_projects: int("max_projects"),
+    features: s(form, "features"),
+    sort: int("sort") ?? 0,
+    active: form.get("active") === "on",
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/platform", "layout");
+  return { ok: "Plan saved." };
+}
+
+// Makes someone WE-estate staff (or not). Staff see this portal and every company.
+export async function setStaff(userId: string, on: boolean, _: ActionResult): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: claims } = await supabase.auth.getClaims();
+  if (!on && claims?.claims?.sub === userId) return { error: "You can't remove your own staff access." };
+  const { data, error } = await supabase.from("profiles").update({ is_platform_admin: on }).eq("id", userId).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Not changed." };
+  revalidatePath("/platform/users");
+  return { ok: on ? "Now WE-estate staff." : "Staff access removed." };
+}
