@@ -1,6 +1,33 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { ROOT_DOMAIN } from "@/lib/host";
 import { getBrand } from "@/lib/brand";
 import { SOCIALS, getSiteInfo, telLink, waLink } from "@/lib/siteinfo";
+
+const DESCRIPTION =
+  "WE-estate is project control software for real-estate developers in Egypt and the Gulf: budget and cost control, schedule and progress, contracts and payments, procurement, unit sales, handover and facility management, with approvals between departments and a 3D site view.";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(`https://${ROOT_DOMAIN}`),
+  description: DESCRIPTION,
+  keywords: [
+    "real estate developer software", "construction project control", "project control software Egypt",
+    "real estate ERP", "cost control", "payment certificates", "unit sales software", "handover management",
+    "WE-estate", "weestate", "برنامج إدارة مشروعات عقارية", "برنامج للمطورين العقاريين", "التحكم في المشروعات",
+  ],
+  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 } },
+  openGraph: {
+    type: "website",
+    siteName: "WE-estate",
+    url: `https://${ROOT_DOMAIN}`,
+    title: "WE-estate · Project control for real-estate developers",
+    description: DESCRIPTION,
+    images: [{ url: "/og.png", width: 1200, height: 630, alt: "WE-estate: every project, every department, one line." }],
+    locale: "en_US",
+  },
+  twitter: { card: "summary_large_image", title: "WE-estate · Project control for real-estate developers", description: DESCRIPTION, images: ["/og.png"] },
+  verification: process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : undefined,
+};
 
 // The public website on the root domain: its own header and footer.
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {

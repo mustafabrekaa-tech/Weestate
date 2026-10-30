@@ -17,6 +17,8 @@ export async function generateMetadata(): Promise<Metadata> {
     applicationName: b.appName,
     manifest: "/manifest.webmanifest",
     icons: b.logo ? { icon: b.logo } : undefined,
+    // Workspaces and the admin portal stay out of search results; the website opts in.
+    robots: { index: false, follow: false },
   };
 }
 

@@ -8,7 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { sendEnquiry } from "./actions";
 
 export const metadata: Metadata = {
-  title: { absolute: "WE-estate · The operating system for real-estate developers" },
+  title: { absolute: "WE-estate · Project control software for real-estate developers" },
+  alternates: { canonical: "/" },
   description: "Budget, schedule, contracts, procurement, sales, handover and facility management for real-estate developers, with a 3D site and approvals between departments.",
 };
 
@@ -26,8 +27,32 @@ export default async function Landing() {
     <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
   );
 
+  const root = `https://${b.rootDomain}`;
+  const ld = [
+    {
+      "@context": "https://schema.org", "@type": "Organization", name: "WE-estate", url: root,
+      logo: `${root}/icon-512.png`, description: "Project control software for real-estate developers.",
+      ...(info.sales_email || info.support_email ? { email: info.sales_email || info.support_email } : {}),
+      ...(info.phone ? { telephone: info.phone } : {}),
+      ...(info.address ? { address: { "@type": "PostalAddress", streetAddress: info.address, addressCountry: "EG" } } : {}),
+      sameAs: [info.linkedin, info.instagram, info.facebook, info.tiktok, info.x_url, info.youtube].filter(Boolean),
+    },
+    {
+      "@context": "https://schema.org", "@type": "SoftwareApplication", name: "WE-estate", url: root,
+      applicationCategory: "BusinessApplication", operatingSystem: "Web browser",
+      description: "Budget, schedule, contracts, procurement, sales, handover and facility management for real-estate developers.",
+      ...(show("prices") && (plans ?? []).some((p) => Number(p.price_egp))
+        ? { offers: { "@type": "AggregateOffer", priceCurrency: "EGP", lowPrice: Math.min(...(plans ?? []).map((p) => Number(p.price_egp)).filter(Boolean)) } }
+        : {}),
+    },
+    ...(show("faq") && faq.length
+      ? [{ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) }]
+      : []),
+  ];
+
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       <section className="ws-hero">
         <div className="ws-wrap ws-hero__in">
           <div className="ws-hero__copy">

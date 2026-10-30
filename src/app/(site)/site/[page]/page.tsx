@@ -11,7 +11,8 @@ const PAGES: Record<string, [string, keyof SiteText]> = {
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ page: string }> }): Promise<Metadata> {
-  return { title: PAGES[(await params).page]?.[0] };
+  const page = (await params).page;
+  return { title: PAGES[page]?.[0], alternates: { canonical: `/${page}` } };
 }
 
 export default async function TextPage({ params }: { params: Promise<{ page: string }> }) {
