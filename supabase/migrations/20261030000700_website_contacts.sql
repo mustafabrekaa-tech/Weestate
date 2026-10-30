@@ -17,3 +17,5 @@ alter table public.platform_settings
   add column if not exists tiktok text not null default '',
   add column if not exists about_text text not null default '',
   add column if not exists refund_text text not null default '';
+-- Parts of the website switched off in the admin portal.
+alter table public.platform_settings add column if not exists site_hidden text[] not null default '{}';

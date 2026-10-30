@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getSiteInfo, type SiteInfo } from "@/lib/siteinfo";
+import { getSiteInfo, type SiteText } from "@/lib/siteinfo";
 
 // Text pages written in the admin portal: about us and the legal pages.
-const PAGES: Record<string, [string, keyof SiteInfo]> = {
+const PAGES: Record<string, [string, keyof SiteText]> = {
   about: ["About us", "about_text"],
   privacy: ["Privacy policy", "privacy_text"],
   terms: ["Terms of service", "terms_text"],

@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { ActionForm } from "@/components/ActionForm";
 import { PortalHead } from "@/components/PortalHead";
 import { getBrand } from "@/lib/brand";
-import { getSiteInfo, type SiteInfo } from "@/lib/siteinfo";
+import { FAQ, FEATURES, SECTIONS } from "@/lib/sitecontent";
+import { getSiteInfo, type SiteText } from "@/lib/siteinfo";
 import { saveWebsite } from "../actions";
 
 export const metadata: Metadata = { title: "Website" };
 
-const CONTACT: [keyof SiteInfo, string, string][] = [
+const CONTACT: [keyof SiteText, string, string][] = [
   ["sales_email", "Sales email", "info@weestate.app"],
   ["support_email", "Support email", "support@weestate.app"],
   ["phone", "Phone", "+20 1xx xxx xxxx"],
@@ -16,10 +17,10 @@ const CONTACT: [keyof SiteInfo, string, string][] = [
   ["map_url", "Google Maps link", "https://maps.app.goo.gl/..."],
   ["hours", "Working hours", "Sunday to Thursday, 9:00 to 17:00"],
 ];
-const SOCIAL: [keyof SiteInfo, string][] = [
+const SOCIAL: [keyof SiteText, string][] = [
   ["linkedin", "LinkedIn"], ["instagram", "Instagram"], ["facebook", "Facebook"], ["tiktok", "TikTok"], ["x_url", "X"], ["youtube", "YouTube"],
 ];
-const PAGES: [keyof SiteInfo, string, string][] = [
+const PAGES: [keyof SiteText, string, string][] = [
   ["about_text", "About us", "/about"],
   ["privacy_text", "Privacy policy", "/privacy"],
   ["terms_text", "Terms of service", "/terms"],
@@ -34,6 +35,31 @@ export default async function PlatformWebsite() {
         <a href={`https://${rootDomain}`} target="_blank" rel="noreferrer" className="we-btn">Open the website</a>
       </PortalHead>
       <ActionForm action={saveWebsite}>
+        <section className="we-card we-stack">
+          <h2 style={{ margin: 0 }}>What shows on the website</h2>
+          <p className="we-help" style={{ margin: 0 }}>Untick anything you don&apos;t want visitors to see. Menu and footer links follow automatically.</p>
+          <div className="we-checks">
+            {SECTIONS.map(([k, l]) => (
+              <label key={k}><input type="checkbox" name="show" value={k} defaultChecked={!info.hidden.includes(k)} /> {l}</label>
+            ))}
+          </div>
+          <details>
+            <summary>Feature cards ({FEATURES.length})</summary>
+            <div className="we-checks">
+              {FEATURES.map((f) => (
+                <label key={f.t}><input type="checkbox" name="show" value={`feature:${f.t}`} defaultChecked={!info.hidden.includes(`feature:${f.t}`)} /> {f.t}</label>
+              ))}
+            </div>
+          </details>
+          <details>
+            <summary>Questions ({FAQ.length})</summary>
+            <div className="we-checks">
+              {FAQ.map(([q]) => (
+                <label key={q}><input type="checkbox" name="show" value={`faq:${q}`} defaultChecked={!info.hidden.includes(`faq:${q}`)} /> {q}</label>
+              ))}
+            </div>
+          </details>
+        </section>
         <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>Contact details</h2>
           <p className="we-help" style={{ margin: 0 }}>Shown in the footer and next to the demo form. With WhatsApp filled in, a &quot;Chat with us&quot; button appears on every page.</p>

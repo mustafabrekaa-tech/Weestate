@@ -15,7 +15,6 @@ export async function proxy(request: NextRequest) {
     const path = request.nextUrl.pathname;
     const url = request.nextUrl.clone();
     if (path === "/") { url.pathname = "/site"; return NextResponse.rewrite(url); }
-    if (path === "/login") { url.pathname = "/site/signin"; return NextResponse.rewrite(url); }
     if (["/privacy", "/terms", "/refund", "/about"].includes(path)) { url.pathname = `/site${path}`; return NextResponse.rewrite(url); }
     if (path.startsWith("/site")) return NextResponse.next();
     url.pathname = "/";

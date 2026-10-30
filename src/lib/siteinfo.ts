@@ -2,13 +2,17 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 // What the public website shows about WE-estate itself: contacts, socials, legal pages.
-export type SiteInfo = {
+export type SiteInfo = SiteText & {
+  // Parts of the website switched off in the admin portal.
+  hidden: string[];
+};
+export type SiteText = {
   support_email: string; sales_email: string; phone: string; whatsapp: string; address: string; map_url: string; hours: string;
   linkedin: string; facebook: string; instagram: string; x_url: string; youtube: string;
   tiktok: string; privacy_text: string; terms_text: string; refund_text: string; about_text: string;
 };
 
-export const SOCIALS: [keyof SiteInfo, string, string][] = [
+export const SOCIALS: [keyof SiteText, string, string][] = [
   ["linkedin", "LinkedIn", "M4 8h3v9H4zM5.5 3.5a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4zM9 8h3v1.3c.5-.8 1.5-1.5 3-1.5 2.6 0 3 1.7 3 4V17h-3v-4.5c0-1.1 0-2.4-1.5-2.4S12 11.3 12 12.4V17H9z"],
   ["facebook", "Facebook", "M11.5 17v-6h2l.4-2.5h-2.4V7c0-.7.3-1.3 1.4-1.3h1.1V3.5c-.5-.1-1.2-.2-2-.2-2 0-3.2 1.2-3.2 3.4v1.8H6.6V11h2.2v6z"],
   ["instagram", "Instagram", "M7 3h6a4 4 0 0 1 4 4v6a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm3 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm4.3-1.2a.8.8 0 1 0 0 1.6.8.8 0 0 0 0-1.6z"],
@@ -21,9 +25,11 @@ export const getSiteInfo = cache(async (): Promise<SiteInfo> => {
   const supabase = await createClient();
   const { data } = await supabase.from("platform_settings").select("*").maybeSingle();
   const pick = (k: string) => String((data as Record<string, unknown> | null)?.[k] ?? "");
-  return Object.fromEntries(
+  const info = Object.fromEntries(
     ["support_email", "sales_email", "phone", "whatsapp", "address", "map_url", "hours", "linkedin", "facebook", "instagram", "x_url", "youtube", "tiktok", "privacy_text", "terms_text", "refund_text", "about_text"].map((k) => [k, pick(k)]),
-  ) as SiteInfo;
+  ) as unknown as SiteInfo;
+  info.hidden = ((data as { site_hidden?: string[] } | null)?.site_hidden ?? []);
+  return info;
 });
 
 export const waLink = (n: string) => `https://wa.me/${n.replace(/[^\d]/g, "").replace(/^0/, "20")}`;

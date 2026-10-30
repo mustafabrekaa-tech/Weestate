@@ -41,16 +41,3 @@ export function EnquiryForm({ action }: { action: (p: ActionResult, f: FormData)
     </form>
   );
 }
-
-export function WorkspaceForm({ action, root }: { action: (p: ActionResult, f: FormData) => Promise<ActionResult>; root: string }) {
-  const [state, formAction, pending] = useActionState(action, null);
-  return (
-    <form action={formAction} className="ws-form">
-      {state?.error && <div className="we-banner we-banner--error" role="alert">{state.error}</div>}
-      <label>Your company&apos;s workspace
-        <span className="ws-addr"><input name="workspace" required placeholder="shortname" autoCapitalize="none" autoCorrect="off" spellCheck={false} /><span>.{root}</span></span>
-      </label>
-      <button className="ws-btn ws-btn--dark" disabled={pending}>{pending ? "Finding…" : "Continue"}</button>
-    </form>
-  );
-}

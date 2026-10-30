@@ -642,3 +642,9 @@ a.we-pcard:hover { border-color: var(--gold); }
   .ws-mock__body { grid-template-columns: 1fr; }
   .ws-mock__side { display: none; }
 }
+
+/* Tick lists, e.g. what shows on the website */
+.we-checks { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 20px; padding: 6px 0; }
+.we-checks label { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; line-height: 1.4; }
+.we-checks input { margin-top: 3px; }
+.we-card details > summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 4px 0; }

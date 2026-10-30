@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EnquiryForm } from "@/components/SiteForms";
 import { getBrand } from "@/lib/brand";
 import { money } from "@/lib/format";
+import { FAQ, FEATURES } from "@/lib/sitecontent";
 import { getSiteInfo, telLink, waLink } from "@/lib/siteinfo";
 import { createClient } from "@/lib/supabase/server";
 import { sendEnquiry } from "./actions";
@@ -11,26 +12,6 @@ export const metadata: Metadata = {
   description: "Budget, schedule, contracts, procurement, sales, handover and facility management for real-estate developers, with a 3D site and approvals between departments.",
 };
 
-const FEATURES: { t: string; d: string; i: string }[] = [
-  { t: "Budget and cost control", d: "Budgets by phase and cost code, revisions with approval, committed and actual cost, EAC and CPI.", i: "M10 3v14M14 6.5C14 5 12.5 4 10 4S6 5 6 7s2 2.5 4 3 4 1 4 3-1.5 3-4 3-4-1-4-2.5" },
-  { t: "Schedule and progress", d: "Import Primavera P6 or MS Project, record monthly progress and see planned against actual with SPI.", i: "M3 16l4-5 3 3 4-6 3 3M3 3v14h14" },
-  { t: "Contracts and payments", d: "Contracts, BOQ, payment certificates with retention and advance recovery, and variations, all routed for approval.", i: "M5 3h7l3 3v11H5zM12 3v3h3M8 10h5M8 13h5" },
-  { t: "Procurement", d: "Purchase requests from site to award, with a suppliers and contractors directory.", i: "M3 4h2l2 9h9l2-6H6M8 16.5a1 1 0 1 0 0 .01M15 16.5a1 1 0 1 0 0 .01" },
-  { t: "Sales and units", d: "Unit inventory, reservations and sales, prices and payment plans, live availability by phase and building.", i: "M4 10l6-6 6 6M6 8.5V16h8V8.5M9 16v-3h2v3" },
-  { t: "Handover and community", d: "Snag lists, handover appointments, and owner requests after delivery.", i: "M12 3a4 4 0 1 1-3.5 6L3 14.5V17h2.5v-2h2v-2h2l1-1A4 4 0 0 1 12 3z" },
-  { t: "Facility management", d: "Work orders, assets and maintenance once the compound is lived in.", i: "M14.5 3.5a3.5 3.5 0 0 0-4.6 4.4L3.5 14.3a1.4 1.4 0 0 0 2 2l6.4-6.4a3.5 3.5 0 0 0 4.4-4.6l-2 2-2-.5-.5-2z" },
-  { t: "Approvals between departments", d: "Every document moves step by step: site, technical office, cost control, finance. Everyone sees what waits on them.", i: "M3 10h4l2-4 2 8 2-4h4" },
-  { t: "Excel in, Excel out", d: "Start from the sheets you already keep. Templates for units, BOQ, budgets, contracts, customers and more.", i: "M4 3h12v14H4zM4 8h12M4 13h12M9 3v14" },
-];
-
-const FAQ: [string, string][] = [
-  ["Do we have to change how our departments work?", "No. You set the steps and approval limits for each document to match how your company already signs things off."],
-  ["Can we bring our existing data?", "Yes. Upload units, BOQ, budgets, contracts, suppliers, customers and schedules from Excel, Primavera P6 or MS Project."],
-  ["Where is our data kept?", "In a secure database in Frankfurt, Germany, separate from every other company's. Sign-in always needs an authenticator app code."],
-  ["Does it work on phones?", "Yes. It runs in the browser on phones, tablets and computers, so site teams can record progress from the field."],
-  ["Can it carry our own name and logo?", "Yes. Your workspace gets its own address, your logo and colours, and can run on your own domain."],
-];
-
 export default async function Landing() {
   const supabase = await createClient();
   const [b, info, { data: plans }] = await Promise.all([
@@ -38,6 +19,9 @@ export default async function Landing() {
     getSiteInfo(),
     supabase.from("plans").select("code, name, price_egp, max_users, max_projects, features").eq("active", true).order("sort"),
   ]);
+  const show = (k: string) => !info.hidden.includes(k);
+  const features = FEATURES.filter((f) => show(`feature:${f.t}`));
+  const faq = FAQ.filter(([q]) => show(`faq:${q}`));
   const icon = (d: string) => (
     <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>
   );
@@ -51,8 +35,8 @@ export default async function Landing() {
             <h1>Every project, every department, <em>one line.</em></h1>
             <p>{b.appName} brings budget, schedule, contracts, procurement, sales, handover and facility management into one place, so you always know where each project stands and what is waiting on whom.</p>
             <div className="ws-hero__cta">
-              <a href="#contact" className="ws-btn ws-btn--gold ws-btn--lg">Book a demo</a>
-              <a href="#features" className="ws-btn ws-btn--ghost ws-btn--lg">See what it does</a>
+              {show("contact") && <a href="#contact" className="ws-btn ws-btn--gold ws-btn--lg">Book a demo</a>}
+              {show("features") && <a href="#features" className="ws-btn ws-btn--ghost ws-btn--lg">See what it does</a>}
             </div>
             <ul className="ws-ticks">
               <li>Phone, tablet and desktop</li><li>Your own web address</li><li>Set up from your Excel sheets</li>
@@ -80,6 +64,7 @@ export default async function Landing() {
         </div>
       </section>
 
+      {show("stats") && (
       <section className="ws-strip">
         <div className="ws-wrap ws-strip__in">
           {[["9", "approval workflows"], ["14", "kinds of data from Excel"], ["3D", "site and units"], ["2-step", "sign-in for everyone"]].map(([n, t]) => (
@@ -87,7 +72,9 @@ export default async function Landing() {
           ))}
         </div>
       </section>
+      )}
 
+      {show("features") && features.length > 0 && (
       <section id="features" className="ws-sec">
         <div className="ws-wrap">
           <div className="ws-sec__head">
@@ -96,7 +83,7 @@ export default async function Landing() {
             <p>Each department enters its own work. {b.appName} adds it up, so management sees the whole picture without chasing spreadsheets.</p>
           </div>
           <div className="ws-features">
-            {FEATURES.map((f) => (
+            {features.map((f) => (
               <article key={f.t} className="ws-feature">
                 <span className="ws-feature__icon">{icon(f.i)}</span>
                 <h3>{f.t}</h3>
@@ -106,7 +93,9 @@ export default async function Landing() {
           </div>
         </div>
       </section>
+      )}
 
+      {show("site3d") && (
       <section id="site3d" className="ws-sec ws-sec--dark">
         <div className="ws-wrap ws-split">
           <div>
@@ -142,7 +131,9 @@ export default async function Landing() {
           </div>
         </div>
       </section>
+      )}
 
+      {show("workflow") && (
       <section id="workflow" className="ws-sec">
         <div className="ws-wrap">
           <div className="ws-sec__head">
@@ -163,7 +154,9 @@ export default async function Landing() {
           <p className="ws-muted ws-center">The same flow runs for variations, purchases, budget revisions, sales, handovers, work orders and owner requests, each with its own steps.</p>
         </div>
       </section>
+      )}
 
+      {show("security") && (
       <section id="security" className="ws-sec ws-sec--soft">
         <div className="ws-wrap ws-cards3">
           {[
@@ -175,8 +168,9 @@ export default async function Landing() {
           ))}
         </div>
       </section>
+      )}
 
-      {(plans ?? []).length > 0 && (
+      {show("plans") && (plans ?? []).length > 0 && (
         <section id="plans" className="ws-sec">
           <div className="ws-wrap">
             <div className="ws-sec__head">
@@ -189,13 +183,13 @@ export default async function Landing() {
                 <div key={p.code} className={`ws-plan${i === 1 ? " ws-plan--hi" : ""}`}>
                   {i === 1 && <span className="ws-plan__tag">Most chosen</span>}
                   <h3>{p.name}</h3>
-                  <div className="ws-plan__price">{Number(p.price_egp) ? <>EGP {money(p.price_egp)}<small> / month</small></> : "Talk to us"}</div>
+                  <div className="ws-plan__price">{show("prices") && Number(p.price_egp) ? <>EGP {money(p.price_egp)}<small> / month</small></> : "Talk to us"}</div>
                   <ul>
                     <li>{p.max_projects ? `Up to ${p.max_projects} project${p.max_projects > 1 ? "s" : ""}` : "Unlimited projects"}</li>
                     <li>{p.max_users ? `Up to ${p.max_users} people` : "Unlimited people"}</li>
                     {String(p.features || "").split(",").map((f: string) => f.trim()).filter(Boolean).map((f: string) => <li key={f}>{f}</li>)}
                   </ul>
-                  <a href="#contact" className={`ws-btn ${i === 1 ? "ws-btn--gold" : "ws-btn--dark"}`}>Ask for a demo</a>
+                  {show("contact") && <a href="#contact" className={`ws-btn ${i === 1 ? "ws-btn--gold" : "ws-btn--dark"}`}>Ask for a demo</a>}
                 </div>
               ))}
             </div>
@@ -203,17 +197,20 @@ export default async function Landing() {
         </section>
       )}
 
+      {show("faq") && faq.length > 0 && (
       <section className="ws-sec ws-sec--soft">
         <div className="ws-wrap ws-faq">
           <div className="ws-sec__head"><span className="ws-kicker">Questions</span><h2>Good to know</h2></div>
           <div>
-            {FAQ.map(([q, a]) => (
+            {faq.map(([q, a]) => (
               <details key={q}><summary>{q}</summary><p>{a}</p></details>
             ))}
           </div>
         </div>
       </section>
+      )}
 
+      {show("contact") && (
       <section id="contact" className="ws-sec ws-sec--dark">
         <div className="ws-wrap ws-split">
           <div>
@@ -231,6 +228,7 @@ export default async function Landing() {
           <div className="ws-card ws-card--form"><EnquiryForm action={sendEnquiry} /></div>
         </div>
       </section>
+      )}
     </main>
   );
 }

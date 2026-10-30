@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getBrand } from "@/lib/brand";
 import { getMe, type ActionResult } from "@/lib/data";
 import { esc, layout, mailFrom, sendMail } from "@/lib/mail";
+import { FAQ, FEATURES, SECTIONS } from "@/lib/sitecontent";
 import { createClient } from "@/lib/supabase/server";
 import { connectDomain, domainState, removeDomain, vercelReady } from "@/lib/vercel";
 
@@ -197,8 +198,11 @@ export async function saveWebsite(_: ActionResult, form: FormData): Promise<Acti
     }
     row[k] = k.endsWith("_text") ? v.slice(0, 40000) : v.slice(0, 300);
   }
+  const shown = new Set(form.getAll("show").map(String));
+  const all = [...SECTIONS.map(([k]) => k), ...FEATURES.map((f) => `feature:${f.t}`), ...FAQ.map(([q]) => `faq:${q}`)];
+  const site_hidden = all.filter((k) => !shown.has(k));
   const supabase = await createClient();
-  const { data, error } = await supabase.from("platform_settings").update({ ...row, updated_at: new Date().toISOString() }).eq("id", true).select("id");
+  const { data, error } = await supabase.from("platform_settings").update({ ...row, site_hidden, updated_at: new Date().toISOString() }).eq("id", true).select("id");
   if (error) return { error: error.message };
   if (!data?.length) return { error: "Only WE-estate staff can change this." };
   revalidatePath("/", "layout");

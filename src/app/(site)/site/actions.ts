@@ -64,14 +64,3 @@ export async function sendEnquiry(_: ActionResult, form: FormData): Promise<Acti
   });
   return { ok: `Thanks ${name.split(" ")[0]}. We've got your message and will get back to you within one working day.` };
 }
-
-// "Go to your workspace": a company's short name or name opens its sign-in page.
-export async function goToWorkspace(_: ActionResult, form: FormData): Promise<ActionResult> {
-  const text = s(form, "workspace", 80);
-  if (!text) return { error: "Type your company's short name." };
-  const supabase = await createClient();
-  const { data } = await supabase.rpc("find_workspace", { p_text: text.replace(/\..*$/, "") });
-  if (!data) return { error: "We couldn't find that workspace. Check the short name with your admin, for example msq for msq.weestate.app." };
-  const { rootDomain } = await getBrand();
-  redirect(`https://${data}.${rootDomain}/login`);
-}
