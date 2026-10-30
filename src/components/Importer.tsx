@@ -2,18 +2,20 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/data";
-import { IMPORTS, mapRows, parseCsv, parseMspXml, parseXer, templateCsv, type ImportKind } from "@/lib/imports";
+import { downloadTemplate, IMPORTS, mapRows, parseCsv, parseMspXml, parseXer, templateCsv, type ImportKind } from "@/lib/imports";
 
 const CHUNK = 1000;
 
 export function Importer({
   save,
   kinds,
+  initial,
 }: {
   save: (kind: string, rows: Record<string, unknown>[]) => Promise<ActionResult>;
   kinds: ImportKind[];
+  initial?: string;
 }) {
-  const [kind, setKind] = useState<ImportKind>(kinds[0]!);
+  const [kind, setKind] = useState<ImportKind>(kinds.includes(initial as ImportKind) ? (initial as ImportKind) : kinds[0]!);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [note, setNote] = useState<ActionResult>(null);
   const [file, setFile] = useState("");
@@ -74,11 +76,18 @@ export function Importer({
 
   return (
     <div className="we-stack">
-      <div className="we-row">
-        {kinds.map((k) => (
-          <button key={k} type="button" className={`we-pill${k === kind ? " is-on" : ""}`} onClick={() => { setKind(k); setRows([]); setNote(null); }}>
-            {IMPORTS[k].name}
-          </button>
+      <div className="we-import-kinds">
+        {[...new Set(kinds.map((k) => IMPORTS[k].area))].map((area) => (
+          <div key={area} className="we-import-kinds__group">
+            <span className="we-eyebrow">{area}</span>
+            <div className="we-row" style={{ gap: 6 }}>
+              {kinds.filter((k) => IMPORTS[k].area === area).map((k) => (
+                <button key={k} type="button" className={`we-pill${k === kind ? " is-on" : ""}`} onClick={() => { setKind(k); setRows([]); setNote(null); }}>
+                  {IMPORTS[k].name}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
       <div className="we-card we-stack">
@@ -87,11 +96,12 @@ export function Importer({
             Choose a file
             <input type="file" hidden accept=".xlsx,.csv,.txt,.xer,.xml" onChange={(e) => e.target.files?.[0] && read(e.target.files[0])} />
           </label>
-          <a className="we-link" href={href} download={`weestate-${kind}-template.csv`}>Download the {IMPORTS[kind].name.toLowerCase()} template</a>
+          <button type="button" className="we-btn we-btn--ghost" onClick={() => downloadTemplate(kind)}>Download Excel template</button>
+          <a className="we-link" href={href} download={`weestate-${kind}-template.csv`}>CSV template</a>
         </div>
         <span className="we-help">
           Excel (.xlsx) or CSV with these headings: {cols.map((c) => c.label + (c.required ? " *" : "")).join(", ")}.
-          {kind === "activities" && " Primavera P6 (.xer) and MS Project (.xml) exports work too; the first import becomes the baseline."}
+          {IMPORTS[kind].help && ` ${IMPORTS[kind].help}`}
           {" "}Saved by {IMPORTS[kind].who}. Rows with the same code are updated, not duplicated.
         </span>
         {note?.error && <div className="we-banner we-banner--error" role="alert">{note.error}</div>}

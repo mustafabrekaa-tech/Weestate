@@ -46,13 +46,20 @@ export async function resetPassword(id: string, _: ActionResult): Promise<Action
 
 export async function saveCompany(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
   const supabase = await createClient();
-  const domain = s(form, "domain").toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "");
   const { data, error } = await supabase
     .from("companies")
-    .update({ name: s(form, "name"), name_ar: s(form, "name_ar"), logo_url: s(form, "logo_url"), domain: domain || null, currency: s(form, "currency") || "EGP" })
+    .update({
+      name: s(form, "name"),
+      name_ar: s(form, "name_ar"),
+      logo_url: s(form, "logo_url"),
+      currency: s(form, "currency") || "EGP",
+      brand_color: form.get("default_color") === "on" ? "" : s(form, "brand_color").toLowerCase(),
+      tagline: s(form, "tagline"),
+      require_mfa: form.get("require_mfa") === "on",
+    })
     .eq("id", id)
     .select("id");
-  if (error) return { error: error.code === "23505" ? "That domain is used by another workspace." : error.message };
+  if (error) return { error: error.message };
   if (!data?.length) return { error: "Only an admin can change the company." };
   revalidatePath("/", "layout");
   return { ok: "Company saved." };

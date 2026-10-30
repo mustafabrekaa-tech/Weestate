@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/data";
+import { IMPORTS } from "@/lib/imports";
 import { createClient } from "@/lib/supabase/server";
 
 const num = (v: FormDataEntryValue | null) => {
@@ -103,23 +104,15 @@ export async function addContract(id: string, _: ActionResult, form: FormData): 
   if (!str(form.get("code")) || !str(form.get("contractor"))) return { error: "Enter a contract code and the contractor." };
   if (value == null || Number.isNaN(value)) return { error: "Enter the contract value in EGP." };
   const supabase = await createClient();
-  const { error } = await supabase.rpc("import_rows", {
-    p_project: id,
-    p_kind: "contracts",
-    p_rows: [{
-      code: str(form.get("code")),
-      contractor: str(form.get("contractor")),
-      scope: str(form.get("scope")),
-      value_egp: value,
-      retention_pct: num(form.get("retention_pct")) ?? 5,
-      advance_pct: num(form.get("advance_pct")) ?? 0,
-      kind: str(form.get("kind")) || "main",
-      cost_code: str(form.get("cost_code")) || null,
-      phase: str(form.get("phase")) || null,
-      start_date: str(form.get("start_date")) || null,
-      finish_date: str(form.get("finish_date")) || null,
-    }],
-  });
+  // Every contract column the import knows, read from the form by the same names.
+  const row: Record<string, unknown> = {};
+  for (const c of IMPORTS.contracts.columns) {
+    const v = form.get(c.key);
+    if (v == null) continue;
+    row[c.key] = c.type === "number" ? num(v) : str(v) || null;
+  }
+  row.value_egp = value;
+  const { error } = await supabase.rpc("import_rows", { p_project: id, p_kind: "contracts", p_rows: [row] });
   if (error) return { error: error.message };
   return done(id, "contracts", "Contract saved.");
 }
@@ -211,6 +204,19 @@ export async function saveSettings(id: string, _: ActionResult, form: FormData):
       budget_egp: num(form.get("budget_egp")) ?? 0,
       start_date: str(form.get("start_date")) || null,
       finish_date: str(form.get("finish_date")) || null,
+      city: str(form.get("city")),
+      district: str(form.get("district")),
+      plot_no: str(form.get("plot_no")),
+      land_area_m2: num(form.get("land_area_m2")),
+      bua_m2: num(form.get("bua_m2")),
+      units_planned: num(form.get("units_planned")),
+      owner_entity: str(form.get("owner_entity")),
+      consultant: str(form.get("consultant")),
+      main_contractor: str(form.get("main_contractor")),
+      permit_no: str(form.get("permit_no")),
+      permit_date: str(form.get("permit_date")) || null,
+      handover_date: str(form.get("handover_date")) || null,
+      description: str(form.get("description")),
       ...(lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng) ? { lat, lng } : {}),
     })
     .eq("id", id)
@@ -244,4 +250,56 @@ export async function copyStructure(id: string, _: ActionResult, form: FormData)
   const { error } = await supabase.rpc("copy_project_structure", { p_src: str(form.get("source")), p_dst: id });
   if (error) return { error: error.message };
   return done(id, "settings", "Phases, unit types and budget lines copied.");
+}
+
+// 3D site plan ----------------------------------------------------------------------------------
+
+export async function saveOutline(id: string, kind: "phase" | "building" | "unit", target: string, ring: [number, number][] | null): Promise<ActionResult> {
+  const supabase = await createClient();
+  const closed = ring && ring.length >= 3 ? [...ring, ring[0]!] : null;
+  const { error } = await supabase.rpc("save_outline", { p_project: id, p_kind: kind, p_id: target, p_ring: closed });
+  if (error) return { error: error.message };
+  return done(id, "site", ring ? "Outline saved." : "Outline removed.");
+}
+
+export async function saveBuilding(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const code = str(form.get("code"));
+  if (!code) return { error: "Give the building a code, such as B01." };
+  const { error } = await supabase.rpc("import_rows", {
+    p_project: id,
+    p_kind: "buildings",
+    p_rows: [{ code, name: str(form.get("name")) || code, phase: str(form.get("phase")) || null, floors: num(form.get("floors")) }],
+  });
+  if (error) return { error: error.message };
+  const h = num(form.get("floor_height_m")), b = num(form.get("base_m"));
+  if ((h != null && !Number.isNaN(h)) || (b != null && !Number.isNaN(b))) {
+    await supabase.from("buildings").update({
+      ...(h != null && !Number.isNaN(h) ? { floor_height_m: h } : {}),
+      ...(b != null && !Number.isNaN(b) ? { base_m: b } : {}),
+    }).eq("project_id", id).eq("code", code);
+  }
+  return done(id, "site", "Building saved.");
+}
+
+export async function changeUnitStatus(id: string, unit: string, status: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("units").update({ status }).eq("id", unit).eq("project_id", id).select("id");
+  if (error) return { error: denied(error, "the PM, Sales or Handover") };
+  if (!data?.length) return { error: "Only the PM, Sales or Handover can change a unit." };
+  return done(id, "site", "Unit updated.");
+}
+
+export async function addModel(id: string, model: { name: string; url: string; size: number }): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("project_models").insert({ project_id: id, name: model.name, url: model.url, size_bytes: model.size });
+  if (error) return { error: error.code === "42501" ? "Only PM, Technical office, Cost control or Sales can add models." : error.message };
+  return done(id, "site", "Model added.");
+}
+
+export async function removeModel(id: string, model: string): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("project_models").delete().eq("id", model).eq("project_id", id);
+  if (error) return { error: error.message };
+  return done(id, "site", "Model removed.");
 }

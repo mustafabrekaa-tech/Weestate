@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { signIn } from "./actions";
 
-export function LoginForm() {
+export function LoginForm({ host }: { host: string }) {
   const [error, action, pending] = useActionState(signIn, null);
   return (
     <form action={action} className="we-stack">
@@ -23,7 +23,7 @@ export function LoginForm() {
       <button className="we-btn we-btn--primary" style={{ justifyContent: "center" }} disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </button>
-      <p className="we-help" style={{ margin: 0 }}>weestate.app</p>
+      <p className="we-help" style={{ margin: 0 }}>{host}</p>
     </form>
   );
 }

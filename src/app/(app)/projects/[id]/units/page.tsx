@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { getMe } from "@/lib/data";
-import { money } from "@/lib/format";
+import { date, money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { addUnitType, generateUnits, setUnitStatus } from "../actions";
 
@@ -23,7 +23,7 @@ export default async function UnitsPage({
   const { status, phase, q } = await searchParams;
   const supabase = await createClient();
   const me = await getMe();
-  let uq = supabase.from("units").select("id, code, unit_type, area_m2, floor, status, list_price_egp, phases(name)").eq("project_id", id).order("code").limit(300);
+  let uq = supabase.from("units").select("id, code, unit_type, area_m2, garden_m2, bedrooms, bathrooms, view, finishing, delivery_date, floor, status, list_price_egp, phases(name), buildings(code)").eq("project_id", id).order("code").limit(300);
   if (status) uq = uq.eq("status", status);
   if (phase) uq = uq.eq("phase_id", phase);
   if (q) uq = uq.ilike("code", `%${q}%`);
@@ -89,17 +89,24 @@ export default async function UnitsPage({
         <ActionForm action={setUnitStatus.bind(null, id)} className="we-stack">
           <div className="we-table-wrap" style={{ maxHeight: 520 }}>
             <table className="we-table">
-              <thead><tr>{canStatus && <th />}<th>Unit</th><th>Type</th><th>Phase</th><th className="num">Floor</th><th className="num">Area m²</th><th className="num">List price</th><th>Status</th></tr></thead>
+              <thead><tr>{canStatus && <th />}<th>Unit</th><th>Type</th><th>Phase</th><th>Building</th><th className="num">Floor</th><th className="num">Area m²</th><th className="num">Garden m²</th><th className="num">Beds</th><th className="num">Baths</th><th>View</th><th>Finishing</th><th>Delivery</th><th className="num">List price</th><th>Status</th></tr></thead>
               <tbody>
-                {(units ?? []).length === 0 && <tr><td colSpan={8} className="we-empty">No units match.</td></tr>}
+                {(units ?? []).length === 0 && <tr><td colSpan={15} className="we-empty">No units match.</td></tr>}
                 {(units ?? []).map((u) => (
                   <tr key={u.id}>
                     {canStatus && <td><input type="checkbox" name="unit" value={u.id} aria-label={`Select ${u.code}`} /></td>}
                     <td><span className="we-code">{u.code}</span></td>
                     <td>{u.unit_type}</td>
                     <td>{(u.phases as unknown as { name: string } | null)?.name}</td>
+                    <td>{(u.buildings as unknown as { code: string } | null)?.code ?? ""}</td>
                     <td className="num">{u.floor ?? "–"}</td>
                     <td className="num">{u.area_m2 ?? "–"}</td>
+                    <td className="num">{u.garden_m2 ?? "–"}</td>
+                    <td className="num">{u.bedrooms ?? "–"}</td>
+                    <td className="num">{u.bathrooms ?? "–"}</td>
+                    <td>{u.view}</td>
+                    <td>{u.finishing}</td>
+                    <td>{u.delivery_date ? date(u.delivery_date) : ""}</td>
                     <td className="num">{money(u.list_price_egp)}</td>
                     <td>{label(u.status)}</td>
                   </tr>

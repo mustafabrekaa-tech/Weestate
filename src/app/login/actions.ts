@@ -11,5 +11,8 @@ export async function signIn(_: string | null, form: FormData) {
   });
   if (error && !error.status) return "Can't reach the WE-estate server right now. Try again in a minute.";
   if (error) return "That email and password don't match. Check them, or ask an admin to reset your password.";
+  // Accounts with an authenticator app need the 6-digit code as well.
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") redirect("/login/verify");
   redirect("/");
 }

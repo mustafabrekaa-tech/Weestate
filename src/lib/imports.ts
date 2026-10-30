@@ -1,101 +1,226 @@
 // Column layouts for each import, with the header names people tend to use.
-export type ImportKind = "units" | "boq" | "contracts" | "budget" | "activities" | "suppliers" | "customers";
+export type ImportKind =
+  | "phases" | "buildings" | "unit_types" | "units" | "cost_codes" | "budget" | "activities" | "progress"
+  | "boq" | "suppliers" | "contracts" | "payments" | "customers" | "assets";
 
-export type Column = { key: string; label: string; aliases: string[]; type?: "number" | "date" | "bool"; required?: boolean };
+export type Column = { key: string; label: string; aliases: string[]; type?: "number" | "date" | "bool"; required?: boolean; example?: string | number };
 
-export const IMPORTS: Record<ImportKind, { name: string; who: string; columns: Column[] }> = {
+type Spec = { name: string; who: string; area: string; company?: boolean; help?: string; columns: Column[] };
+
+// One entry per sheet people can upload. Headings are matched loosely, so the
+// sheets they already keep usually work as they are.
+export const IMPORTS: Record<ImportKind, Spec> = {
+  phases: {
+    name: "Phases", who: "PM or Cost control", area: "Project structure",
+    columns: [
+      { key: "code", label: "Phase code", aliases: ["phase", "code"], required: true, example: "P1" },
+      { key: "name", label: "Phase name", aliases: ["name", "description"], example: "Phase 1 villas" },
+      { key: "budget_egp", label: "Budget EGP", aliases: ["budget", "amount"], type: "number", example: 250000000 },
+      { key: "start_date", label: "Start", aliases: ["start date"], type: "date", example: "2026-01-01" },
+      { key: "finish_date", label: "Finish", aliases: ["finish date", "end", "end date"], type: "date", example: "2027-12-31" },
+    ],
+  },
+  buildings: {
+    name: "Buildings", who: "PM, Cost control or Technical office", area: "Project structure",
+    columns: [
+      { key: "code", label: "Building code", aliases: ["building", "block", "code"], required: true, example: "B01" },
+      { key: "name", label: "Building name", aliases: ["name"], example: "Building 1" },
+      { key: "phase", label: "Phase", aliases: ["phase code"], example: "P1" },
+      { key: "floors", label: "Floors", aliases: ["no of floors", "levels"], type: "number", example: 5 },
+    ],
+  },
+  unit_types: {
+    name: "Unit types", who: "PM, Cost control or Sales", area: "Project structure",
+    help: "Category is one of villa, townhouse, twin house, apartment, duplex, penthouse, chalet, office, retail, clinic or other.",
+    columns: [
+      { key: "code", label: "Type code", aliases: ["type", "model", "code"], required: true, example: "V-A" },
+      { key: "name", label: "Type name", aliases: ["name"], example: "Standalone villa A" },
+      { key: "category", label: "Category", aliases: ["kind"], example: "villa" },
+      { key: "area_m2", label: "Area m2", aliases: ["area", "bua", "sqm"], type: "number", example: 320 },
+      { key: "bedrooms", label: "Bedrooms", aliases: ["beds", "rooms"], type: "number", example: 4 },
+    ],
+  },
   units: {
-    name: "Units",
-    who: "PM, Cost control or Sales",
+    name: "Units", who: "PM, Cost control or Sales", area: "Project structure",
+    help: "Status is one of available, reserved, sold, ready, handed over or blocked. Leave it empty to keep the current status.",
     columns: [
-      { key: "code", label: "Unit code", aliases: ["unit", "unit no", "unit number", "code"], required: true },
-      { key: "phase", label: "Phase", aliases: ["phase code"] },
-      { key: "building", label: "Building", aliases: ["building code", "block"] },
-      { key: "unit_type", label: "Unit type", aliases: ["type", "model"] },
-      { key: "area_m2", label: "Area m2", aliases: ["area", "bua", "area (m2)", "sqm"], type: "number" },
-      { key: "floor", label: "Floor", aliases: ["level"], type: "number" },
-      { key: "status", label: "Status", aliases: [] },
-      { key: "list_price_egp", label: "List price EGP", aliases: ["price", "list price"], type: "number" },
+      { key: "code", label: "Unit code", aliases: ["unit", "unit no", "unit number", "code"], required: true, example: "B01-101" },
+      { key: "phase", label: "Phase", aliases: ["phase code"], example: "P1" },
+      { key: "building", label: "Building", aliases: ["building code", "block"], example: "B01" },
+      { key: "unit_type", label: "Unit type", aliases: ["type", "model"], example: "V-A" },
+      { key: "floor", label: "Floor", aliases: ["level"], type: "number", example: 1 },
+      { key: "area_m2", label: "Area m2", aliases: ["area", "bua", "area (m2)", "sqm"], type: "number", example: 320 },
+      { key: "garden_m2", label: "Garden m2", aliases: ["garden", "garden area"], type: "number", example: 120 },
+      { key: "roof_m2", label: "Roof m2", aliases: ["roof", "roof area"], type: "number" },
+      { key: "terrace_m2", label: "Terrace m2", aliases: ["terrace", "balcony"], type: "number" },
+      { key: "bedrooms", label: "Bedrooms", aliases: ["beds", "rooms"], type: "number", example: 4 },
+      { key: "bathrooms", label: "Bathrooms", aliases: ["baths"], type: "number", example: 3 },
+      { key: "view", label: "View", aliases: ["views"], example: "Lagoon" },
+      { key: "orientation", label: "Orientation", aliases: ["facing", "direction"], example: "North" },
+      { key: "finishing", label: "Finishing", aliases: ["finish", "finishing type"], example: "Semi finished" },
+      { key: "status", label: "Status", aliases: [], example: "available" },
+      { key: "list_price_egp", label: "List price EGP", aliases: ["price", "list price"], type: "number", example: 18500000 },
+      { key: "delivery_date", label: "Delivery date", aliases: ["delivery", "handover date"], type: "date", example: "2028-06-30" },
+      { key: "notes", label: "Notes", aliases: ["note", "comment", "remarks"] },
     ],
   },
-  boq: {
-    name: "BOQ",
-    who: "Technical office or Cost control",
+  cost_codes: {
+    name: "Cost codes", who: "Cost control or Finance", area: "Budget and cost", company: true,
     columns: [
-      { key: "code", label: "Item no", aliases: ["item", "code", "ref", "item code"], required: true },
-      { key: "description", label: "Description", aliases: ["desc", "item description"], required: true },
-      { key: "unit", label: "Unit", aliases: ["uom"] },
-      { key: "quantity", label: "Quantity", aliases: ["qty"], type: "number" },
-      { key: "rate_egp", label: "Rate EGP", aliases: ["rate", "unit rate", "unit price"], type: "number" },
-      { key: "section", label: "Section", aliases: ["bill", "trade", "division"] },
-      { key: "cost_code", label: "Cost code", aliases: [] },
-      { key: "phase", label: "Phase", aliases: [] },
-    ],
-  },
-  contracts: {
-    name: "Contracts",
-    who: "Procurement or PM",
-    columns: [
-      { key: "code", label: "Contract code", aliases: ["contract", "contract no", "code"], required: true },
-      { key: "contractor", label: "Contractor", aliases: ["supplier", "vendor", "company"], required: true },
-      { key: "scope", label: "Scope", aliases: ["description"] },
-      { key: "value_egp", label: "Value EGP", aliases: ["value", "contract value", "amount"], type: "number" },
-      { key: "retention_pct", label: "Retention %", aliases: ["retention"], type: "number" },
-      { key: "advance_pct", label: "Advance %", aliases: ["advance"], type: "number" },
-      { key: "kind", label: "Type", aliases: ["contract type"] },
-      { key: "cost_code", label: "Cost code", aliases: [] },
-      { key: "phase", label: "Phase", aliases: [] },
-      { key: "start_date", label: "Start", aliases: ["start date"], type: "date" },
-      { key: "finish_date", label: "Finish", aliases: ["finish date", "end", "end date"], type: "date" },
+      { key: "code", label: "Cost code", aliases: ["code"], required: true, example: "03.01" },
+      { key: "parent_code", label: "Parent code", aliases: ["parent"], example: "03" },
+      { key: "name", label: "Name", aliases: ["description", "cost code name"], example: "Concrete works" },
+      { key: "name_ar", label: "Name in Arabic", aliases: ["arabic name"] },
     ],
   },
   budget: {
-    name: "Budget",
-    who: "Cost control or Finance",
+    name: "Budget", who: "Cost control or Finance", area: "Budget and cost",
     columns: [
-      { key: "cost_code", label: "Cost code", aliases: ["code"], required: true },
-      { key: "phase", label: "Phase", aliases: [] },
-      { key: "amount_egp", label: "Amount EGP", aliases: ["amount", "budget", "value"], type: "number", required: true },
+      { key: "cost_code", label: "Cost code", aliases: ["code"], required: true, example: "03.01" },
+      { key: "phase", label: "Phase", aliases: [], example: "P1" },
+      { key: "amount_egp", label: "Amount EGP", aliases: ["amount", "budget", "value"], type: "number", required: true, example: 42000000 },
       { key: "note", label: "Note", aliases: ["notes", "comment"] },
     ],
   },
   activities: {
-    name: "Schedule activities",
-    who: "Cost control or PM",
+    name: "Schedule activities", who: "Cost control or PM", area: "Schedule",
+    help: "Primavera P6 (.xer) and MS Project (.xml) exports work too. The first schedule becomes the baseline.",
     columns: [
-      { key: "code", label: "Activity ID", aliases: ["activity id", "id", "task id", "code"], required: true },
-      { key: "name", label: "Activity name", aliases: ["name", "task name", "activity"], required: true },
-      { key: "wbs", label: "WBS", aliases: [] },
-      { key: "phase", label: "Phase", aliases: [] },
-      { key: "start_date", label: "Start", aliases: ["start date", "planned start", "baseline start"], type: "date" },
-      { key: "finish_date", label: "Finish", aliases: ["finish date", "planned finish", "baseline finish", "end"], type: "date" },
-      { key: "is_milestone", label: "Milestone", aliases: [], type: "bool" },
-      { key: "weight", label: "Weight", aliases: ["budget", "cost", "weight %"], type: "number" },
+      { key: "code", label: "Activity ID", aliases: ["activity id", "id", "task id", "code"], required: true, example: "A1010" },
+      { key: "name", label: "Activity name", aliases: ["name", "task name", "activity"], required: true, example: "Excavation B01" },
+      { key: "wbs", label: "WBS", aliases: [], example: "P1.B01.SUB" },
+      { key: "phase", label: "Phase", aliases: [], example: "P1" },
+      { key: "building", label: "Building", aliases: ["block"], example: "B01" },
+      { key: "start_date", label: "Start", aliases: ["start date", "planned start", "baseline start"], type: "date", example: "2026-02-01" },
+      { key: "finish_date", label: "Finish", aliases: ["finish date", "planned finish", "baseline finish", "end"], type: "date", example: "2026-03-15" },
+      { key: "is_milestone", label: "Milestone", aliases: [], type: "bool", example: "no" },
+      { key: "weight", label: "Weight", aliases: ["budget", "cost", "weight %"], type: "number", example: 1 },
+    ],
+  },
+  progress: {
+    name: "Progress", who: "Cost control, PM or Site", area: "Schedule",
+    help: "One row per activity per reporting date. Percent complete is 0 to 100.",
+    columns: [
+      { key: "code", label: "Activity ID", aliases: ["activity id", "id", "task id", "code"], required: true, example: "A1010" },
+      { key: "period", label: "Date", aliases: ["period", "data date", "as of"], type: "date", example: "2026-10-31" },
+      { key: "actual_pct", label: "Percent complete", aliases: ["actual %", "% complete", "progress", "actual"], type: "number", required: true, example: 65 },
+      { key: "note", label: "Note", aliases: ["notes", "comment"] },
+    ],
+  },
+  boq: {
+    name: "BOQ", who: "Technical office or Cost control", area: "Construction",
+    columns: [
+      { key: "code", label: "Item no", aliases: ["item", "code", "ref", "item code"], required: true, example: "3.1.1" },
+      { key: "description", label: "Description", aliases: ["desc", "item description"], required: true, example: "Reinforced concrete for footings" },
+      { key: "unit", label: "Unit", aliases: ["uom"], example: "m3" },
+      { key: "quantity", label: "Quantity", aliases: ["qty"], type: "number", example: 850 },
+      { key: "rate_egp", label: "Rate EGP", aliases: ["rate", "unit rate", "unit price"], type: "number", example: 6200 },
+      { key: "section", label: "Section", aliases: ["bill", "trade", "division"], example: "Concrete" },
+      { key: "cost_code", label: "Cost code", aliases: [], example: "03.01" },
+      { key: "phase", label: "Phase", aliases: [], example: "P1" },
+      { key: "building", label: "Building", aliases: ["block"], example: "B01" },
     ],
   },
   suppliers: {
-    name: "Suppliers and contractors",
-    who: "Procurement, PM or Facility",
+    name: "Suppliers and contractors", who: "Procurement, PM or Facility", area: "Procurement", company: true,
+    help: "Type is contractor, supplier, consultant, facility or other. Rating is 1 to 5.",
     columns: [
-      { key: "name", label: "Name", aliases: ["company", "supplier"], required: true },
-      { key: "kind", label: "Type", aliases: ["category"] },
-      { key: "tax_id", label: "Tax ID", aliases: ["tax no", "tax number"] },
-      { key: "phone", label: "Phone", aliases: ["mobile", "tel"] },
+      { key: "name", label: "Name", aliases: ["company", "supplier", "contractor"], required: true, example: "Nile Contracting" },
+      { key: "name_ar", label: "Name in Arabic", aliases: ["arabic name"] },
+      { key: "kind", label: "Type", aliases: ["category"], example: "contractor" },
+      { key: "trade", label: "Trade", aliases: ["speciality", "specialty", "scope"], example: "Concrete and structure" },
+      { key: "contact_name", label: "Contact person", aliases: ["contact", "contact name"], example: "Eng. Ahmed Samir" },
+      { key: "phone", label: "Phone", aliases: ["mobile", "tel"], example: "01000000000" },
       { key: "email", label: "Email", aliases: ["e-mail"] },
+      { key: "address", label: "Address", aliases: [] },
+      { key: "tax_id", label: "Tax ID", aliases: ["tax no", "tax number", "tax card"] },
+      { key: "commercial_reg", label: "Commercial register", aliases: ["cr", "commercial registration", "cr no"] },
+      { key: "bank_name", label: "Bank", aliases: ["bank name"] },
+      { key: "iban", label: "IBAN", aliases: ["account", "account no", "bank account"] },
+      { key: "rating", label: "Rating", aliases: ["score"], type: "number", example: 4 },
+      { key: "notes", label: "Notes", aliases: ["note", "comment", "remarks"] },
+    ],
+  },
+  contracts: {
+    name: "Contracts", who: "Procurement or PM", area: "Construction",
+    help: "Type is main, subcontract, supply, consultancy, facility or other. Status is draft, active, completed, closed or terminated.",
+    columns: [
+      { key: "code", label: "Contract code", aliases: ["contract", "contract no", "code"], required: true, example: "C-001" },
+      { key: "contractor", label: "Contractor", aliases: ["supplier", "vendor", "company"], required: true, example: "Nile Contracting" },
+      { key: "scope", label: "Scope", aliases: ["description"], example: "Structure Phase 1" },
+      { key: "kind", label: "Type", aliases: ["contract type"], example: "main" },
+      { key: "status", label: "Status", aliases: [], example: "active" },
+      { key: "value_egp", label: "Value EGP", aliases: ["value", "contract value", "amount"], type: "number", example: 95000000 },
+      { key: "advance_pct", label: "Advance %", aliases: ["advance"], type: "number", example: 10 },
+      { key: "retention_pct", label: "Retention %", aliases: ["retention"], type: "number", example: 5 },
+      { key: "performance_bond_pct", label: "Performance bond %", aliases: ["performance bond", "bond %"], type: "number", example: 5 },
+      { key: "vat_pct", label: "VAT %", aliases: ["vat", "tax %"], type: "number", example: 14 },
+      { key: "defects_months", label: "Defects period months", aliases: ["defects liability", "dlp", "maintenance period"], type: "number", example: 12 },
+      { key: "payment_terms", label: "Payment terms", aliases: ["terms"], example: "Monthly certificates, paid in 30 days" },
+      { key: "insurance", label: "Insurance", aliases: ["car policy"] },
+      { key: "signed_on", label: "Signed on", aliases: ["signing date", "signed"], type: "date", example: "2026-01-15" },
+      { key: "start_date", label: "Start", aliases: ["start date"], type: "date", example: "2026-02-01" },
+      { key: "finish_date", label: "Finish", aliases: ["finish date", "end", "end date"], type: "date", example: "2027-06-30" },
+      { key: "contact_name", label: "Contact person", aliases: ["contact"] },
+      { key: "contact_phone", label: "Contact phone", aliases: ["phone", "mobile"] },
+      { key: "contact_email", label: "Contact email", aliases: ["email"] },
+      { key: "cost_code", label: "Cost code", aliases: [], example: "03" },
+      { key: "phase", label: "Phase", aliases: [], example: "P1" },
+      { key: "notes", label: "Notes", aliases: ["note", "remarks"] },
+    ],
+  },
+  payments: {
+    name: "Payments made", who: "Finance", area: "Budget and cost",
+    help: "Past payments to contractors and suppliers, for the cost report and cash flow.",
+    columns: [
+      { key: "contract", label: "Contract code", aliases: ["contract", "contract no"], example: "C-001" },
+      { key: "supplier", label: "Paid to", aliases: ["supplier", "contractor", "payee"], example: "Nile Contracting" },
+      { key: "cost_code", label: "Cost code", aliases: [], example: "03.01" },
+      { key: "amount_egp", label: "Amount EGP", aliases: ["amount", "paid", "value"], type: "number", required: true, example: 4500000 },
+      { key: "paid_on", label: "Paid on", aliases: ["date", "payment date"], type: "date", example: "2026-09-30" },
+      { key: "reference", label: "Reference", aliases: ["cheque", "check no", "transfer no", "ref"] },
     ],
   },
   customers: {
-    name: "Customers and owners",
-    who: "Sales, Handover or Community",
+    name: "Customers and owners", who: "Sales, Handover or Community", area: "Sales and customers", company: true,
+    help: "People with the same national ID are updated, not added twice.",
     columns: [
-      { key: "full_name", label: "Full name", aliases: ["name", "customer", "owner"], required: true },
-      { key: "national_id", label: "National ID", aliases: ["id", "id number", "passport"] },
-      { key: "phone", label: "Phone", aliases: ["mobile", "tel"] },
+      { key: "full_name", label: "Full name", aliases: ["name", "customer", "owner", "client"], required: true, example: "Mona Hassan" },
+      { key: "national_id", label: "National ID", aliases: ["id", "id number", "passport", "national id / passport"] },
+      { key: "nationality", label: "Nationality", aliases: [], example: "Egyptian" },
+      { key: "phone", label: "Phone", aliases: ["mobile", "tel"], example: "01000000000" },
+      { key: "phone2", label: "Second phone", aliases: ["phone 2", "mobile 2", "other phone"] },
       { key: "email", label: "Email", aliases: ["e-mail"] },
       { key: "address", label: "Address", aliases: [] },
+      { key: "birth_date", label: "Date of birth", aliases: ["dob", "birth date", "birthday"], type: "date" },
+      { key: "occupation", label: "Occupation", aliases: ["job", "profession"] },
+      { key: "source", label: "Lead source", aliases: ["source", "channel"], example: "Broker" },
+      { key: "broker", label: "Broker", aliases: ["agent", "broker name"] },
+      { key: "notes", label: "Notes", aliases: ["note", "remarks"] },
+    ],
+  },
+  assets: {
+    name: "Assets and equipment", who: "Facility or PM", area: "Facility management",
+    help: "Category is lift, pump, generator, hvac, fire, electrical, irrigation, pool, landscape, security or other.",
+    columns: [
+      { key: "tag", label: "Asset tag", aliases: ["tag", "asset no", "code"], required: true, example: "LIFT-B01-1" },
+      { key: "name", label: "Name", aliases: ["description", "asset"], example: "Passenger lift 1" },
+      { key: "category", label: "Category", aliases: ["type"], example: "lift" },
+      { key: "building", label: "Building", aliases: ["block"], example: "B01" },
+      { key: "unit", label: "Unit", aliases: ["unit code"] },
+      { key: "contract", label: "Maintenance contract", aliases: ["contract", "contract code"] },
+      { key: "manufacturer", label: "Manufacturer", aliases: ["make", "brand"], example: "Schindler" },
+      { key: "model", label: "Model", aliases: [] },
+      { key: "install_date", label: "Installed on", aliases: ["install date", "installation date"], type: "date" },
+      { key: "warranty_until", label: "Warranty until", aliases: ["warranty", "warranty end"], type: "date" },
     ],
   },
 };
+
+export const IMPORT_ORDER: ImportKind[] = [
+  "phases", "buildings", "unit_types", "units", "cost_codes", "budget", "payments", "activities", "progress",
+  "boq", "contracts", "suppliers", "customers", "assets",
+];
 
 const norm = (s: unknown) => String(s ?? "").toLowerCase().replace(/[_\s]+/g, " ").replace(/[^\p{L}\p{N} %]/gu, "").trim();
 
@@ -208,4 +333,29 @@ export function parseMspXml(text: string) {
 
 export function templateCsv(kind: ImportKind) {
   return IMPORTS[kind].columns.map((c) => c.label).join(",") + "\n";
+}
+
+// An Excel template with the headings, one example row and a notes sheet.
+export async function downloadTemplate(kind: ImportKind) {
+  const { default: writeXlsxFile } = await import("write-excel-file/browser");
+  const spec = IMPORTS[kind];
+  const head = spec.columns.map((c) => ({ value: c.label, fontWeight: "bold" as const, backgroundColor: "#F7EFDC" }));
+  const example = spec.columns.map((c) =>
+    c.example == null ? null : c.type === "date" ? { value: new Date(String(c.example)), type: Date, format: "yyyy-mm-dd" }
+      : typeof c.example === "number" ? { value: c.example, type: Number } : { value: String(c.example), type: String },
+  );
+  const notes = [
+    [{ value: "Column", fontWeight: "bold" as const }, { value: "Needed", fontWeight: "bold" as const }, { value: "Kind", fontWeight: "bold" as const }, { value: "Also accepted as", fontWeight: "bold" as const }],
+    ...spec.columns.map((c) => [
+      { value: c.label }, { value: c.required ? "Yes" : "" }, { value: c.type ?? "text" }, { value: c.aliases.join(", ") },
+    ]),
+    [],
+    [{ value: spec.help ?? "Replace the example row with your own data. Extra columns are ignored." }],
+  ];
+  await writeXlsxFile(
+    [
+      { data: [head, example], sheet: spec.name.slice(0, 31), columns: spec.columns.map((c) => ({ width: Math.max(14, c.label.length + 4) })), stickyRowsCount: 1 },
+      { data: notes, sheet: "How to fill", columns: [{ width: 26 }, { width: 10 }, { width: 10 }, { width: 60 }] },
+    ] as never,
+  ).toFile(`weestate-${kind}-template.xlsx`);
 }

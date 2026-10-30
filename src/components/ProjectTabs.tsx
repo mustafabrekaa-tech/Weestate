@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const tabs: [string, string][] = [
   ["", "Overview"],
+  ["site", "3D site"],
   ["budget", "Budget and cost"],
   ["schedule", "Schedule and progress"],
   ["boq", "BOQ"],
@@ -12,20 +13,33 @@ const tabs: [string, string][] = [
   ["units", "Units and sales"],
   ["cashflow", "Cash flow"],
   ["documents", "Documents"],
-  ["import", "Import"],
+  ["import", "Import Excel"],
   ["settings", "Setup"],
 ];
+
+// The sheet each tab's data usually comes from.
+const sheetFor: Record<string, string> = {
+  budget: "budget", schedule: "activities", boq: "boq", contracts: "contracts", units: "units", cashflow: "payments", settings: "phases", site: "buildings",
+};
 
 export function ProjectTabs({ id }: { id: string }) {
   const path = usePathname();
   const active = path.split("/")[3] ?? "";
+  const sheet = sheetFor[active];
   return (
-    <nav className="we-tabs" aria-label="Project">
-      {tabs.map(([slug, label]) => (
-        <Link key={slug} href={`/projects/${id}${slug ? `/${slug}` : ""}`} aria-current={slug === active ? "page" : undefined}>
-          {label}
+    <div className="we-tabbar">
+      <nav className="we-tabs" aria-label="Project">
+        {tabs.map(([slug, label]) => (
+          <Link key={slug} href={`/projects/${id}${slug ? `/${slug}` : ""}`} aria-current={slug === active ? "page" : undefined}>
+            {label}
+          </Link>
+        ))}
+      </nav>
+      {sheet && (
+        <Link className="we-btn we-btn--secondary we-btn--sm" href={`/projects/${id}/import?kind=${sheet}`}>
+          Upload from Excel
         </Link>
-      ))}
-    </nav>
+      )}
+    </div>
   );
 }

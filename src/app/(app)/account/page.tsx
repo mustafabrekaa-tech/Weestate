@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { getMe } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { changePassword, saveProfile } from "./actions";
+import { TwoFactor } from "./TwoFactor";
 
 export const metadata: Metadata = { title: "My account" };
 
@@ -13,7 +14,7 @@ export default async function Account() {
   const supabase = await createClient();
   const [{ data: dept }, { data: comp }] = await Promise.all([
     supabase.from("departments").select("name").eq("code", me.department ?? "").maybeSingle(),
-    supabase.from("companies").select("name").eq("id", me.company_id ?? "").maybeSingle(),
+    supabase.from("companies").select("name, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
   ]);
   return (
     <>
@@ -39,6 +40,10 @@ export default async function Account() {
             <div className="we-field"><label htmlFor="confirm">Again</label><input id="confirm" name="confirm" type="password" className="we-input" autoComplete="new-password" required minLength={8} /></div>
             <div><button className="we-btn we-btn--primary">Change password</button></div>
           </ActionForm>
+        </section>
+        <section className="we-card" id="security">
+          <h2>Authenticator app</h2>
+          <TwoFactor required={!!comp?.require_mfa} />
         </section>
       </div>
     </>

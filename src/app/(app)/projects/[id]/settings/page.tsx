@@ -60,6 +60,21 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
             <div className="we-field"><label htmlFor="budget_egp">Headline budget (EGP)</label><input id="budget_egp" name="budget_egp" className="we-input we-mono" defaultValue={p.budget_egp} /></div>
             <div className="we-field"><label htmlFor="start_date">Start</label><input id="start_date" name="start_date" type="date" className="we-input" defaultValue={p.start_date ?? ""} /></div>
             <div className="we-field"><label htmlFor="finish_date">Finish</label><input id="finish_date" name="finish_date" type="date" className="we-input" defaultValue={p.finish_date ?? ""} /></div>
+            <div className="we-field"><label htmlFor="handover_date">First handover</label><input id="handover_date" name="handover_date" type="date" className="we-input" defaultValue={p.handover_date ?? ""} /></div>
+            <span className="we-section-title">Land and permits</span>
+            <div className="we-field"><label htmlFor="city">City</label><input id="city" name="city" className="we-input" defaultValue={p.city} placeholder="New Cairo" /></div>
+            <div className="we-field"><label htmlFor="district">District</label><input id="district" name="district" className="we-input" defaultValue={p.district} placeholder="5th Settlement" /></div>
+            <div className="we-field"><label htmlFor="plot_no">Plot no.</label><input id="plot_no" name="plot_no" className="we-input we-mono" defaultValue={p.plot_no} /></div>
+            <div className="we-field"><label htmlFor="land_area_m2">Land area (m²)</label><input id="land_area_m2" name="land_area_m2" className="we-input we-mono" defaultValue={p.land_area_m2 ?? ""} inputMode="decimal" /></div>
+            <div className="we-field"><label htmlFor="bua_m2">Built-up area (m²)</label><input id="bua_m2" name="bua_m2" className="we-input we-mono" defaultValue={p.bua_m2 ?? ""} inputMode="decimal" /></div>
+            <div className="we-field"><label htmlFor="units_planned">Units planned</label><input id="units_planned" name="units_planned" className="we-input we-mono" defaultValue={p.units_planned ?? ""} inputMode="numeric" /></div>
+            <div className="we-field"><label htmlFor="permit_no">Building permit no.</label><input id="permit_no" name="permit_no" className="we-input we-mono" defaultValue={p.permit_no} /></div>
+            <div className="we-field"><label htmlFor="permit_date">Permit date</label><input id="permit_date" name="permit_date" type="date" className="we-input" defaultValue={p.permit_date ?? ""} /></div>
+            <span className="we-section-title">Parties</span>
+            <div className="we-field"><label htmlFor="owner_entity">Land owner or partner</label><input id="owner_entity" name="owner_entity" className="we-input" defaultValue={p.owner_entity} placeholder="NUCA" /></div>
+            <div className="we-field"><label htmlFor="consultant">Design and supervision consultant</label><input id="consultant" name="consultant" className="we-input" defaultValue={p.consultant} /></div>
+            <div className="we-field"><label htmlFor="main_contractor">Main contractor</label><input id="main_contractor" name="main_contractor" className="we-input" defaultValue={p.main_contractor} /></div>
+            <div className="we-field" style={{ gridColumn: "1 / -1" }}><label htmlFor="description">Description</label><textarea id="description" name="description" className="we-input" rows={3} defaultValue={p.description} /></div>
           </div>
           <SiteMap pick={{ lat: p.lat, lng: p.lng }} zoom={p.map_zoom} height={360} />
           <div><button className="we-btn we-btn--primary">Save project</button></div>

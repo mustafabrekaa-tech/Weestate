@@ -23,6 +23,11 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
     supabase.from("phases").select("code, name").eq("project_id", id).order("code"),
     supabase.from("payments_out").select("certificate_id, amount_egp").eq("project_id", id),
   ]);
+  const { data: register } = await supabase
+    .from("contracts")
+    .select("id, code, contractor, kind, status, signed_on, start_date, finish_date, retention_pct, advance_pct, performance_bond_pct, vat_pct, defects_months, payment_terms, contact_name, contact_phone")
+    .eq("project_id", id)
+    .order("code");
   const rows = (bal ?? []) as Balance[];
   const paidBy = new Map<string, number>();
   for (const p of paid ?? []) if (p.certificate_id) paidBy.set(p.certificate_id, (paidBy.get(p.certificate_id) ?? 0) + Number(p.amount_egp));
@@ -62,6 +67,36 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
           </table>
         </div>
       </section>
+
+      {(register ?? []).length > 0 && (
+        <details className="we-card">
+          <summary><b>Contract register</b> <span className="we-help">· terms, dates and contacts for {(register ?? []).length} contracts</span></summary>
+          <div className="we-table-wrap">
+            <table className="we-table">
+              <thead><tr><th>Contract</th><th>Type</th><th>Status</th><th>Signed</th><th>Start</th><th>Finish</th><th className="num">Adv. %</th><th className="num">Ret. %</th><th className="num">Bond %</th><th className="num">VAT %</th><th className="num">DLP mo.</th><th>Payment terms</th><th>Contact</th></tr></thead>
+              <tbody>
+                {(register ?? []).map((c) => (
+                  <tr key={c.id}>
+                    <td><span className="we-code">{c.code}</span><div className="we-title">{c.contractor}</div></td>
+                    <td>{c.kind}</td>
+                    <td>{c.status}</td>
+                    <td>{date(c.signed_on)}</td>
+                    <td>{date(c.start_date)}</td>
+                    <td>{date(c.finish_date)}</td>
+                    <td className="num">{c.advance_pct ?? ""}</td>
+                    <td className="num">{c.retention_pct ?? ""}</td>
+                    <td className="num">{c.performance_bond_pct ?? ""}</td>
+                    <td className="num">{c.vat_pct ?? ""}</td>
+                    <td className="num">{c.defects_months ?? ""}</td>
+                    <td>{c.payment_terms}</td>
+                    <td>{[c.contact_name, c.contact_phone].filter(Boolean).join(" · ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
 
       <section className="we-stack">
         <h2 style={{ margin: 0 }}>Payment certificates</h2>
@@ -144,6 +179,24 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
               </div>
               <div className="we-field"><label htmlFor="cstart">Start</label><input id="cstart" name="start_date" type="date" className="we-input" /></div>
               <div className="we-field"><label htmlFor="cfinish">Finish</label><input id="cfinish" name="finish_date" type="date" className="we-input" /></div>
+              <div className="we-field"><label htmlFor="csigned">Signed on</label><input id="csigned" name="signed_on" type="date" className="we-input" /></div>
+              <div className="we-field">
+                <label htmlFor="cstatus">Status</label>
+                <select id="cstatus" name="status" className="we-input we-select" defaultValue="active">
+                  {["draft", "active", "completed", "closed", "terminated"].map((v) => <option key={v} value={v}>{v[0]!.toUpperCase() + v.slice(1)}</option>)}
+                </select>
+              </div>
+              <span className="we-section-title">Terms</span>
+              <div className="we-field"><label htmlFor="cbond">Performance bond %</label><input id="cbond" name="performance_bond_pct" className="we-input we-mono" inputMode="decimal" /></div>
+              <div className="we-field"><label htmlFor="cvat">VAT %</label><input id="cvat" name="vat_pct" className="we-input we-mono" inputMode="decimal" defaultValue="14" /></div>
+              <div className="we-field"><label htmlFor="cdlp">Defects period (months)</label><input id="cdlp" name="defects_months" className="we-input we-mono" inputMode="numeric" defaultValue="12" /></div>
+              <div className="we-field" style={{ gridColumn: "1 / -1" }}><label htmlFor="cterms">Payment terms</label><input id="cterms" name="payment_terms" className="we-input" placeholder="Monthly certificates, paid within 30 days" /></div>
+              <div className="we-field"><label htmlFor="cins">Insurance</label><input id="cins" name="insurance" className="we-input" placeholder="CAR policy no." /></div>
+              <span className="we-section-title">Contractor contact</span>
+              <div className="we-field"><label htmlFor="ccname">Contact person</label><input id="ccname" name="contact_name" className="we-input" /></div>
+              <div className="we-field"><label htmlFor="ccphone">Phone</label><input id="ccphone" name="contact_phone" className="we-input" inputMode="tel" /></div>
+              <div className="we-field"><label htmlFor="ccemail">Email</label><input id="ccemail" name="contact_email" type="email" className="we-input" /></div>
+              <div className="we-field" style={{ gridColumn: "1 / -1" }}><label htmlFor="cnotes">Notes</label><textarea id="cnotes" name="notes" className="we-input" rows={2} /></div>
               <div className="we-field" style={{ alignSelf: "end" }}><button className="we-btn we-btn--primary">Save contract</button></div>
             </ActionForm>
           </section>

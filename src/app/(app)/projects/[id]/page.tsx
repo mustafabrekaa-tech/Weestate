@@ -4,7 +4,7 @@ import { QueueTable } from "@/components/QueueTable";
 import { SCurve, type CurvePoint } from "@/components/SCurve";
 import { SiteMap } from "@/components/SiteMap";
 import { getMe, sortQueue, type QueueItem } from "@/lib/data";
-import { date, pct } from "@/lib/format";
+import { date, money, pct } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 type Phase = { id: string; code: string; name: string; budget_egp: number; finish_date: string | null };
@@ -22,6 +22,7 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
     supabase.from("work_queue").select("*").eq("project_id", id),
     supabase.rpc("setup_checklist", { p_project: id }),
   ]);
+  const { data: facts } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
   if (!p) return null;
   const project = p as ProjectStatus;
   const ph = (phases ?? []) as Phase[];
@@ -70,12 +71,36 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
         <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>Site</h2>
           {project.lat != null && project.lng != null ? (
-            <SiteMap pins={[{ id, lat: project.lat, lng: project.lng, label: project.name }]} zoom={project.map_zoom} height={300} />
+            <SiteMap pins={[{ id, lat: project.lat, lng: project.lng, label: project.name }]} zoom={project.map_zoom} height={380} />
           ) : (
             <div className="we-empty">Not on the map yet. <Link href={`/projects/${id}/settings`}>Place it</Link>.</div>
           )}
         </section>
       </div>
+
+      {facts && (
+        <section className="we-card">
+          <h2>Project facts <Link className="we-link" style={{ fontSize: 13 }} href={`/projects/${id}/settings`}>Edit</Link></h2>
+          <dl className="we-dl we-dl--cols">
+            {([
+              ["City", [facts.city, facts.district].filter(Boolean).join(", ") || facts.location],
+              ["Plot", facts.plot_no],
+              ["Land area", facts.land_area_m2 ? `${money(facts.land_area_m2)} m²` : ""],
+              ["Built-up area", facts.bua_m2 ? `${money(facts.bua_m2)} m²` : ""],
+              ["Units planned", facts.units_planned ? String(facts.units_planned) : ""],
+              ["Permit", [facts.permit_no, facts.permit_date ? date(facts.permit_date) : ""].filter(Boolean).join(" · ")],
+              ["Land owner or partner", facts.owner_entity],
+              ["Consultant", facts.consultant],
+              ["Main contractor", facts.main_contractor],
+              ["Start to finish", facts.start_date || facts.finish_date ? `${date(facts.start_date)} to ${date(facts.finish_date)}` : ""],
+              ["First handover", facts.handover_date ? date(facts.handover_date) : ""],
+            ] as [string, string][]).map(([k, v]) => (
+              <div key={k}><dt>{k}</dt><dd>{v || <span className="we-help">Not set</span>}</dd></div>
+            ))}
+          </dl>
+          {facts.description && <p style={{ margin: "16px 0 0" }}>{facts.description}</p>}
+        </section>
+      )}
 
       <section className="we-card we-stack">
         <h2 style={{ margin: 0 }}>Phases <small>latest monthly progress</small></h2>
