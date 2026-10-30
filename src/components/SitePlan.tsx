@@ -5,7 +5,8 @@ import type { GeoJSONSource, Map as MlMap, StyleSpecification } from "maplibre-g
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/data";
-import { UNIT_STATUS, type SiteBuilding, type SiteModel, type SitePhase, type SiteUnit } from "@/lib/site";
+import { autoLayout } from "@/lib/layout";
+import { UNIT_STATUS, type SiteBuilding, type SiteModel, type SitePhase, type SiteUnit, type SiteZone } from "@/lib/site";
 import { ModelViewer } from "./ModelViewer";
 
 const NO_UNITS = "#c9c3b8";
@@ -41,17 +42,21 @@ const ringCenter = (r: [number, number][]) =>
 // other units with their own outline drawn on their own. Click to inspect;
 // draw outlines straight on the map.
 export function SitePlan({
-  projectId, center, phases, buildings, units, models, canDraw, canSell,
-  saveOutline, changeStatus, addModel, removeModel, children,
+  projectId, center, phases, zones, buildings, units, models, canDraw, canSell, canBuild, initial,
+  saveOutline, saveLayout, changeStatus, addModel, removeModel, children,
 }: {
   projectId: string;
   center: [number, number] | null;
   phases: SitePhase[];
+  zones: SiteZone[];
   buildings: SiteBuilding[];
   units: SiteUnit[];
   models: SiteModel[];
   canDraw: boolean;
   canSell: boolean;
+  canBuild: boolean;
+  initial: { phase: string; zone: string; building: string };
+  saveLayout: (data: unknown) => Promise<ActionResult>;
   saveOutline: (kind: "phase" | "building" | "unit", target: string, ring: [number, number][] | null) => Promise<ActionResult>;
   changeStatus: (unit: string, status: string) => Promise<ActionResult>;
   addModel: (m: { name: string; url: string; size: number }) => Promise<ActionResult>;
@@ -62,9 +67,10 @@ export function SitePlan({
   const mapRef = useRef<MlMap | null>(null);
   const router = useRouter();
   const [ready, setReady] = useState(false);
-  const [view, setView] = useState<"map" | "model">(models.length && !buildings.some((b) => b.footprint) ? "model" : "map");
-  const [phase, setPhase] = useState("");
-  const [building, setBuilding] = useState("");
+  const [view, setView] = useState<"map" | "model">("map");
+  const [phase, setPhase] = useState(initial.phase);
+  const [zone, setZone] = useState(initial.zone);
+  const [building, setBuilding] = useState(initial.building);
   const [pick, setPick] = useState<Pick>(null);
   const [draw, setDraw] = useState<Draw>(null);
   const [note, setNote] = useState<ActionResult>(null);
@@ -72,20 +78,38 @@ export function SitePlan({
   const drawRef = useRef<Draw>(null);
   drawRef.current = draw;
 
+  // Anything not drawn yet gets a suggested place, so every unit shows up in 3D.
+  const layout = useMemo(
+    () => autoLayout({ center: center ?? [31.35, 30.03], phases, zones, buildings, units }),
+    [center, phases, zones, buildings, units],
+  );
+  const allBuildings = useMemo(() => [...buildings, ...layout.virtual] as (SiteBuilding & { virtual?: true })[], [buildings, layout]);
+  // Units in suggested blocks get a suggested floor too.
+  const placed = useMemo(() => {
+    const m = new Map<string, { building: string; floor: number }>();
+    for (const v of layout.virtual) for (const u of v.units) m.set(u.id, { building: v.id, floor: u.floor });
+    return m;
+  }, [layout]);
   const unitsBy = useMemo(() => {
     const m = new Map<string, SiteUnit[]>();
-    for (const u of units) if (u.building_id) m.set(u.building_id, [...(m.get(u.building_id) ?? []), u]);
+    for (const u of units) {
+      const b = u.building_id ?? placed.get(u.id)?.building;
+      if (b) m.set(b, [...(m.get(b) ?? []), { ...u, floor: u.floor ?? placed.get(u.id)?.floor ?? null }]);
+    }
     return m;
-  }, [units]);
+  }, [units, placed]);
+  const made = layout.made.phases.length + layout.made.zones.length + layout.made.buildings.length + layout.made.units.length + layout.virtual.length;
   const unitsRef = useRef(unitsBy);
   unitsRef.current = unitsBy;
 
-  // Everything drawn on the map, as GeoJSON.
+  // Everything on the map, as GeoJSON.
   const data = useMemo(() => {
-    const inPhase = (pid: string | null) => !phase || pid === phase;
+    const zoneOfB = new Map(allBuildings.map((b) => [b.id, b.zone_id]));
+    const keepB = (b: SiteBuilding) => (!phase || b.phase_id === phase) && (!zone || b.zone_id === zone) && (!building || b.id === building);
     const floors: GeoJSON.Feature[] = [];
-    for (const b of buildings) {
-      if (!b.footprint || !inPhase(b.phase_id) || (building && b.id !== building)) continue;
+    for (const b of allBuildings) {
+      const ring = layout.buildings.get(b.id);
+      if (!ring || !keepB(b)) continue;
       const bu = unitsBy.get(b.id) ?? [];
       const levels = Math.max(1, b.floors ?? 0, ...bu.map((u) => (u.floor ?? 0) + 1));
       const lowest = Math.min(0, ...bu.map((u) => u.floor ?? 0));
@@ -102,12 +126,13 @@ export function SitePlan({
             base: Number(b.base_m) + f * h, top: Number(b.base_m) + (f + 1) * h - 0.25,
             color: st ? UNIT_STATUS[st]?.color ?? NO_UNITS : NO_UNITS,
           },
-          geometry: { type: "Polygon", coordinates: [b.footprint] },
+          geometry: { type: "Polygon", coordinates: [ring] },
         });
       }
     }
     const own: GeoJSON.Feature[] = units
-      .filter((u) => u.footprint && inPhase(u.phase_id) && (!building || u.building_id === building))
+      .filter((u) => layout.units.has(u.id) && (!phase || u.phase_id === phase)
+        && (!zone || u.zone_id === zone || zoneOfB.get(u.building_id ?? "") === zone) && (!building || u.building_id === building))
       .map((u, i) => {
         const b = buildings.find((x) => x.id === u.building_id);
         const h = Number(b?.floor_height_m) || 3.2;
@@ -115,17 +140,21 @@ export function SitePlan({
         return {
           type: "Feature", id: 100000 + i,
           properties: { kind: "unit", unit: u.id, base, top: base + (u.floor == null && !b ? 2 * h : h) - 0.25, color: UNIT_STATUS[u.status]?.color ?? NO_UNITS },
-          geometry: { type: "Polygon", coordinates: [u.footprint!] },
+          geometry: { type: "Polygon", coordinates: [layout.units.get(u.id)!] },
         };
       });
     const areas: GeoJSON.Feature[] = phases
-      .filter((p) => p.boundary && (!phase || p.id === phase))
-      .map((p, i) => ({ type: "Feature", id: i + 1, properties: { phase: p.id, name: p.name }, geometry: { type: "Polygon", coordinates: [p.boundary!] } }));
+      .filter((p) => layout.phases.has(p.id) && (!phase || p.id === phase))
+      .map((p, i) => ({ type: "Feature", id: i + 1, properties: { phase: p.id, name: p.name || p.code }, geometry: { type: "Polygon", coordinates: [layout.phases.get(p.id)!] } }));
+    const zoneShapes: GeoJSON.Feature[] = zones
+      .filter((z) => layout.zones.has(z.id) && (!phase || z.phase_id === phase) && (!zone || z.id === zone))
+      .map((z, i) => ({ type: "Feature", id: i + 1, properties: { zone: z.id, name: z.name || z.code }, geometry: { type: "Polygon", coordinates: [layout.zones.get(z.id)!] } }));
     return {
       solids: { type: "FeatureCollection", features: [...floors, ...own] } as GeoJSON.FeatureCollection,
       areas: { type: "FeatureCollection", features: areas } as GeoJSON.FeatureCollection,
+      zones: { type: "FeatureCollection", features: zoneShapes } as GeoJSON.FeatureCollection,
     };
-  }, [buildings, units, phases, phase, building, unitsBy]);
+  }, [allBuildings, buildings, units, phases, zones, phase, zone, building, unitsBy, layout]);
 
   // Build the map once.
   useEffect(() => {
@@ -135,7 +164,7 @@ export function SitePlan({
     import("maplibre-gl").then((ml) => {
       if (cancelled || !box.current) return;
       ml.setWorkerUrl("/maplibre-gl-worker.mjs");
-      const firstShape = buildings.find((b) => b.footprint)?.footprint ?? phases.find((p) => p.boundary)?.boundary;
+      const firstShape = [...layout.buildings.values()][0] ?? [...layout.units.values()][0];
       map = new ml.Map({
         container: box.current,
         style: STYLE,
@@ -158,8 +187,11 @@ export function SitePlan({
         map!.addSource("areas", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map!.addSource("solids", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map!.addSource("sketch", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map!.addSource("zones", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
         map!.addLayer({ id: "areas-fill", type: "fill", source: "areas", paint: { "fill-color": "#c9a24e", "fill-opacity": 0.14 } });
         map!.addLayer({ id: "areas-line", type: "line", source: "areas", paint: { "line-color": "#f2d38a", "line-width": 2, "line-dasharray": [2, 1] } });
+        map!.addLayer({ id: "zones-fill", type: "fill", source: "zones", paint: { "fill-color": "#9fc3e6", "fill-opacity": 0.12 } });
+        map!.addLayer({ id: "zones-line", type: "line", source: "zones", paint: { "line-color": "#cfe3f6", "line-width": 1.5 } });
         map!.addLayer({
           id: "solids", type: "fill-extrusion", source: "solids",
           paint: {
@@ -209,6 +241,7 @@ export function SitePlan({
     if (!map || !ready) return;
     (map.getSource("solids") as GeoJSONSource).setData(data.solids);
     (map.getSource("areas") as GeoJSONSource).setData(data.areas);
+    (map.getSource("zones") as GeoJSONSource).setData(data.zones);
     map.removeFeatureState({ source: "solids" });
     for (const f of data.solids.features) {
       const p = f.properties as { kind: string; unit?: string; building?: string; floor?: number };
@@ -229,18 +262,19 @@ export function SitePlan({
     map.getCanvas().style.cursor = draw ? "crosshair" : "";
   }, [draw, ready]);
 
-  // Fly to the chosen phase or building.
+  // Fly to what is shown whenever the choice changes.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
-    const shape = building ? buildings.find((b) => b.id === building)?.footprint : phase ? phases.find((p) => p.id === phase)?.boundary : null;
-    if (!shape) return;
+    const pts = data.solids.features.flatMap((f) => (f.geometry as GeoJSON.Polygon).coordinates[0] as [number, number][]);
+    if (!pts.length) return;
     import("maplibre-gl").then((ml) => {
-      const b = new ml.LngLatBounds(shape[0], shape[0]);
-      shape.forEach((p) => b.extend(p));
-      map.fitBounds(b, { padding: 80, pitch: 58, maxZoom: 19, duration: 900 });
+      const b = new ml.LngLatBounds(pts[0], pts[0]);
+      pts.forEach((p) => b.extend(p));
+      map.fitBounds(b, { padding: { top: 60, bottom: 60, left: 60, right: 110 }, pitch: 55, bearing: map.getBearing() || -25, maxZoom: 19, duration: 900 });
     });
-  }, [phase, building, ready, buildings, phases]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, zone, building, ready]);
 
   function run(fn: () => Promise<ActionResult>) {
     start(async () => {
@@ -259,8 +293,28 @@ export function SitePlan({
 
   const selectedUnit = pick?.kind === "unit" ? units.find((u) => u.id === pick.id) : undefined;
   const floorUnits = pick?.kind === "floor" ? (unitsBy.get(pick.building) ?? []).filter((u) => (u.floor ?? 0) === pick.floor) : [];
-  const pickedBuilding = pick?.kind === "floor" ? buildings.find((b) => b.id === pick.building) : selectedUnit?.building_id ? buildings.find((b) => b.id === selectedUnit.building_id) : undefined;
-  const shownBuildings = buildings.filter((b) => !phase || b.phase_id === phase);
+  const pickedBuilding = pick?.kind === "floor" ? allBuildings.find((b) => b.id === pick.building)
+    : selectedUnit ? allBuildings.find((b) => b.id === (selectedUnit.building_id ?? placed.get(selectedUnit.id)?.building)) : undefined;
+  const shownZones = zones.filter((z) => !phase || z.phase_id === phase);
+  const shownBuildings = allBuildings.filter((b) => (!phase || b.phase_id === phase) && (!zone || b.zone_id === zone));
+  const shownUnits = data.solids.features.length
+    ? units.filter((u) => (!phase || u.phase_id === phase) && (!building || (u.building_id ?? placed.get(u.id)?.building) === building)
+        && (!zone || u.zone_id === zone || allBuildings.find((b) => b.id === (u.building_id ?? placed.get(u.id)?.building))?.zone_id === zone))
+    : [];
+
+  function saveSuggested() {
+    if (!confirm("Save this suggested layout? Phases, zones, buildings and plots that have no outline yet get the ones shown, and apartments without a building are put into the blocks shown. You can redraw any of them later.")) return;
+    const ring = (m: Map<string, [number, number][]>, id: string) => ({ id, ring: m.get(id) });
+    run(() => saveLayout({
+      phases: layout.made.phases.map((id) => ring(layout.phases, id)),
+      zones: layout.made.zones.map((id) => ring(layout.zones, id)),
+      units: layout.made.units.map((id) => ring(layout.units, id)),
+      buildings: [
+        ...layout.made.buildings.map((id) => ring(layout.buildings, id)),
+        ...layout.virtual.map((v) => ({ code: v.code, phase_id: v.phase_id, zone_id: v.zone_id, floors: v.floors, ring: layout.buildings.get(v.id), units: v.units })),
+      ],
+    }));
+  }
   const missing = {
     phases: phases.filter((p) => !p.boundary).length,
     buildings: buildings.filter((b) => !b.footprint).length,
@@ -275,13 +329,19 @@ export function SitePlan({
         </div>
         {view === "map" && (
           <>
-            <select className="we-input we-select we-input--sm" value={phase} onChange={(e) => { setPhase(e.target.value); setBuilding(""); }} aria-label="Phase">
+            <select className="we-input we-select we-input--sm" value={phase} onChange={(e) => { setPhase(e.target.value); setZone(""); setBuilding(""); setPick(null); }} aria-label="Phase">
               <option value="">All phases</option>
               {phases.map((p) => <option key={p.id} value={p.id}>{p.name || p.code}</option>)}
             </select>
-            <select className="we-input we-select we-input--sm" value={building} onChange={(e) => setBuilding(e.target.value)} aria-label="Building">
+            {zones.length > 0 && (
+              <select className="we-input we-select we-input--sm" value={zone} onChange={(e) => { setZone(e.target.value); setBuilding(""); setPick(null); }} aria-label="Zone">
+                <option value="">All zones</option>
+                {shownZones.map((z) => <option key={z.id} value={z.id}>{z.name || z.code}</option>)}
+              </select>
+            )}
+            <select className="we-input we-select we-input--sm" value={building} onChange={(e) => { setBuilding(e.target.value); setPick(null); }} aria-label="Building">
               <option value="">All buildings</option>
-              {shownBuildings.map((b) => <option key={b.id} value={b.id}>{b.code}{b.name && b.name !== b.code ? ` · ${b.name}` : ""}</option>)}
+              {shownBuildings.map((b) => <option key={b.id} value={b.id}>{b.code}{b.name && b.name !== b.code ? ` · ${b.name}` : ""}{b.virtual ? " (suggested)" : ""}</option>)}
             </select>
           </>
         )}
@@ -391,9 +451,25 @@ export function SitePlan({
                 <div className="we-eyebrow">3D site</div>
                 <h2 className="we-site__title">Click a building or unit</h2>
               </div>
+              <div className="we-tiles we-tiles--tight">
+                <div className="we-tile"><span>Showing</span><b>{shownUnits.length.toLocaleString("en-US")}</b><small>units</small></div>
+                {Object.entries(UNIT_STATUS).map(([k, v]) => {
+                  const n = shownUnits.filter((u) => u.status === k).length;
+                  return n ? <div className="we-tile" key={k}><span><i className="we-dot" style={{ background: v.color }} />{v.label}</span><b>{n.toLocaleString("en-US")}</b></div> : null;
+                })}
+              </div>
               <p className="we-help" style={{ margin: 0 }}>
-                Floors are coloured by the status of their units. Right-drag or Ctrl-drag to tilt and turn. Pick a phase or building above to zoom in.
+                Floors are coloured by the status of their units. Right-drag or Ctrl-drag to tilt and turn. Pick a phase, zone or building above to zoom in.
               </p>
+              {made > 0 && (
+                <div className="we-banner we-banner--info we-stack" style={{ gap: 8 }}>
+                  <span>
+                    Parts of this site have no outline yet, so they are shown in a suggested layout
+                    {layout.virtual.length ? `, with apartments grouped into ${layout.virtual.length} suggested blocks` : ""}. Draw the real outlines below, or keep this one.
+                  </span>
+                  {canBuild && <div><button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={saveSuggested} disabled={pending}>Save this layout</button></div>}
+                </div>
+              )}
               {canDraw && (
                 <div className="we-stack" style={{ gap: 8 }}>
                   <h3 className="we-h3">Draw on the map</h3>

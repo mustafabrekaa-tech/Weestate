@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { LogoUpload } from "@/components/LogoUpload";
-import { getMe } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { savePlatform } from "../actions";
 
 export const metadata: Metadata = { title: "Branding" };
 
 export default async function PlatformBranding() {
-  const me = await getMe();
-  if (!me?.is_platform_admin) redirect("/");
   const supabase = await createClient();
   const { data: p } = await supabase.from("platform_settings").select("*").single();
   return (
     <>
-      <div className="we-pagehead"><div><div className="we-eyebrow">{p?.app_name} staff</div><h1>{p?.app_name} branding</h1></div></div>
       <p className="we-help" style={{ margin: 0 }}>
         How the app looks on {p?.root_domain} and for companies that haven&apos;t set their own branding. A company&apos;s own logo and colour win on its own address.
       </p>

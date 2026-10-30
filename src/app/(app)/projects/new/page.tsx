@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getMe } from "@/lib/data";
+import { getMe, acts } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 import { createProject } from "./actions";
 import { Wizard } from "./Wizard";
@@ -10,7 +10,7 @@ export default async function NewProject() {
   const me = await getMe();
   const supabase = await createClient();
   const { data } = await supabase.from("project_templates").select("id, name, project_type, payload").order("name");
-  const allowed = me?.is_admin || ["pm", "cost_control"].includes(me?.department ?? "");
+  const allowed = acts(me, ["pm", "cost_control"]);
   return (
     <>
       <div className="we-pagehead">

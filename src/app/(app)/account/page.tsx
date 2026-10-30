@@ -43,7 +43,7 @@ export default async function Account() {
         </section>
         <section className="we-card" id="security">
           <h2>Authenticator app</h2>
-          <TwoFactor required={!!comp?.require_mfa} />
+          <TwoFactor required />
         </section>
       </div>
     </>

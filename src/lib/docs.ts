@@ -1,3 +1,4 @@
+import { acts, type Profile } from "@/lib/access";
 // What the screens need to know about each workflow document. The steps,
 // departments and limits live in the database; this is only how to show and
 // raise each type.
@@ -274,5 +275,4 @@ export const docHref = (type: string, id?: string) => {
   return `/docs/${d?.slug ?? type}${id ? `/${id}` : ""}`;
 };
 export const docRef = (prefix: string, n: number | null | undefined) => `${prefix}-${String(n ?? 0).padStart(2, "0")}`;
-export const canRaise = (d: DocType, dept: string | null | undefined, admin: boolean) =>
-  admin || (!!dept && d.raisers.includes(dept));
+export const canRaise = (d: DocType, me: Profile | null | undefined) => acts(me, d.raisers);

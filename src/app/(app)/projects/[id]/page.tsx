@@ -5,6 +5,8 @@ import { SCurve, type CurvePoint } from "@/components/SCurve";
 import { SiteMap } from "@/components/SiteMap";
 import { getMe, sortQueue, type QueueItem } from "@/lib/data";
 import { date, money, pct } from "@/lib/format";
+import { getScope, scoped } from "@/lib/scope";
+import { UNIT_STATUS } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 type Phase = { id: string; code: string; name: string; budget_egp: number; finish_date: string | null };
@@ -14,19 +16,26 @@ type Check = { step: string; done: boolean; detail: string };
 export default async function ProjectOverview({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const me = await getMe();
-  const [{ data: p }, { data: phases }, { data: progress }, { data: queue }, { data: checks }] = await Promise.all([
+  const [me, scope] = await Promise.all([getMe(), getScope(id)]);
+  const [{ data: p }, { data: phases }, { data: progress }, { data: queue }, { data: checks }, { data: unitRows }] = await Promise.all([
     supabase.from("project_status").select("*").eq("id", id).maybeSingle(),
     supabase.from("phases").select("*").eq("project_id", id).order("code"),
     supabase.from("progress_updates").select("phase_id, period, planned_pct, actual_pct").eq("project_id", id).order("period"),
     supabase.from("work_queue").select("*").eq("project_id", id),
     supabase.rpc("setup_checklist", { p_project: id }),
+    scoped(supabase.from("units").select("status, list_price_egp, area_m2").eq("project_id", id).limit(20000), scope, { zone: true, building: true }),
   ]);
   const { data: facts } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
   if (!p) return null;
   const project = p as ProjectStatus;
-  const ph = (phases ?? []) as Phase[];
-  const rows = (progress ?? []) as Progress[];
+  const ph = ((phases ?? []) as Phase[]).filter((x) => !scope.phase || x.id === scope.phase);
+  const rows = ((progress ?? []) as Progress[]).filter((r) => !scope.phase || r.phase_id === scope.phase);
+  const units = (unitRows ?? []) as { status: string; list_price_egp: number | null; area_m2: number | null }[];
+  const byStatus = Object.keys(UNIT_STATUS).map((k) => {
+    const list = units.filter((u) => u.status === k);
+    return { k, n: list.length, value: list.reduce((a, u) => a + Number(u.list_price_egp ?? 0), 0) };
+  });
+  const soldShare = units.length ? units.filter((u) => u.status !== "available" && u.status !== "blocked").length / units.length : 0;
   const todo = ((checks ?? []) as Check[]).filter((c) => !c.done);
 
   // Latest figures per phase, and the project curve weighted by phase budget.
@@ -62,6 +71,34 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
           <div><Link className="we-btn we-btn--secondary we-btn--sm" href={`/projects/${id}/settings`}>Open setup</Link></div>
         </section>
       )}
+
+      <section className="we-card we-stack">
+        <div className="we-row" style={{ justifyContent: "space-between" }}>
+          <h2 style={{ margin: 0 }}>Units <small>{scope.label || "whole project"}</small></h2>
+          <Link className="we-link" href={`/projects/${id}/units`}>Open units</Link>
+        </div>
+        {units.length ? (
+          <>
+            <div className="we-statbar" role="img" aria-label="Units by status">
+              {byStatus.filter((b) => b.n).map((b) => (
+                <span key={b.k} style={{ flexGrow: b.n, background: UNIT_STATUS[b.k]!.color }} title={`${UNIT_STATUS[b.k]!.label}: ${b.n}`} />
+              ))}
+            </div>
+            <div className="we-tiles">
+              <div className="we-tile"><span>Units</span><b>{units.length.toLocaleString("en-US")}</b><small>{pct(soldShare * 100)} reserved or sold</small></div>
+              {byStatus.filter((b) => b.n).map((b) => (
+                <div className="we-tile" key={b.k}>
+                  <span><i className="we-dot" style={{ background: UNIT_STATUS[b.k]!.color }} />{UNIT_STATUS[b.k]!.label}</span>
+                  <b>{b.n.toLocaleString("en-US")}</b>
+                  <small>{b.value ? `EGP ${money(b.value)}` : "–"}</small>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="we-empty">No units here yet. <Link href={`/projects/${id}/import?kind=units`}>Upload units from Excel</Link>.</div>
+        )}
+      </section>
 
       <div className="we-grid we-grid--wide">
         <section className="we-card we-stack">

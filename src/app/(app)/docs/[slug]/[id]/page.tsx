@@ -63,7 +63,7 @@ export default async function DocPage({ params }: { params: Promise<{ slug: stri
   const closed = [d.doneStatus, "rejected"].includes(doc.status);
   const myTurn = !closed && current && (me?.is_admin || me?.department === current.department);
   const lastReturn = [...evs].reverse().find((e) => e.action === "return");
-  const editable = doc.step === 1 && ["draft", "returned"].includes(doc.status) && canRaise(d, me?.department, !!me?.is_admin);
+  const editable = doc.step === 1 && ["draft", "returned"].includes(doc.status) && canRaise(d, me);
 
   // Labels for reference fields.
   const sources = [...new Set([...d.fields, ...(d.lines?.columns ?? [])].map((f) => f.ref).filter(Boolean))] as string[];

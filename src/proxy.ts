@@ -30,26 +30,36 @@ export async function proxy(request: NextRequest) {
   const signedIn = Boolean(data?.claims);
   const path = request.nextUrl.pathname;
 
+  // admin.<root domain> opens the WE-estate admin portal.
+  if (signedIn && path === "/" && (request.headers.get("host") ?? "").startsWith("admin.")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/platform";
+    return NextResponse.redirect(url);
+  }
+
   if (!signedIn && !path.startsWith("/login") && !path.startsWith("/auth")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.search = "";
     return NextResponse.redirect(url);
   }
-  if (signedIn && !path.startsWith("/login/verify") && !path.startsWith("/auth")) {
-    // Accounts with an authenticator app finish signing in with a code.
+  if (signedIn && !path.startsWith("/auth")) {
+    // Signing in always takes an authenticator code: accounts without an
+    // app set one up first, the rest type the code.
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+    const step = aal?.currentLevel === "aal2" ? null : aal?.nextLevel === "aal2" ? "/login/verify" : "/login/setup";
+    if (step && path !== step) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login/verify";
+      url.pathname = step;
       url.search = "";
       return NextResponse.redirect(url);
     }
-  }
-  if (signedIn && path === "/login") {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    return NextResponse.redirect(url);
+    if (!step && path.startsWith("/login")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
   }
   return response;
 }

@@ -56,10 +56,8 @@ export default async function CompanyPage() {
 
           <span className="we-section-title">Security</span>
           <div className="we-field" style={{ gridColumn: "1 / -1" }}>
-            <label className="we-row" style={{ gap: 8, font: "400 15px var(--font-sans)", textTransform: "none", letterSpacing: 0, color: "var(--ink)" }}>
-              <input type="checkbox" name="require_mfa" defaultChecked={!!c?.require_mfa} /> Everyone must use an authenticator app to sign in
-            </label>
-            <span className="we-help">People without one are asked to set it up the next time they open the app. Set up yours first under My account.</span>
+            <span>Everyone signs in with a password and a code from an authenticator app.</span>
+            <span className="we-help">If someone loses their phone, reset their authenticator under People and they set it up again at the next sign-in.</span>
           </div>
 
           <div className="we-field" style={{ alignSelf: "end" }}><button className="we-btn we-btn--primary">Save</button></div>

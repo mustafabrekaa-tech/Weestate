@@ -15,7 +15,7 @@ export default async function ProjectDocuments({ params }: { params: Promise<{ i
       <section className="we-card we-stack">
         <h2 style={{ margin: 0 }}>Raise a document</h2>
         <div className="we-row">
-          {DOCS.filter((d) => canRaise(d, me?.department, !!me?.is_admin)).map((d) => (
+          {DOCS.filter((d) => canRaise(d, me)).map((d) => (
             <Link key={d.type} className="we-btn we-btn--secondary we-btn--sm" href={`/docs/${d.slug}/new?project=${id}`}>{d.name}</Link>
           ))}
         </div>

@@ -8,7 +8,7 @@ type Setup = { id: string; qr: string; secret: string };
 
 // Authenticator-app sign-in (Google Authenticator, Microsoft Authenticator,
 // 1Password and the like): scan the code, confirm with one 6-digit code.
-export function TwoFactor({ required }: { required: boolean }) {
+export function TwoFactor({ required, done }: { required: boolean; done?: string }) {
   const [factors, setFactors] = useState<Factor[] | null>(null);
   const [setup, setSetup] = useState<Setup | null>(null);
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({});
@@ -44,12 +44,13 @@ export function TwoFactor({ required }: { required: boolean }) {
     setBusy(false);
     if (error) return setMsg({ error: "That code didn't match. Use the code showing now in the app." });
     setSetup(null);
+    if (done) return void (window.location.href = done);
     setMsg({ ok: "Authenticator app turned on. From now on you'll be asked for a code when you sign in." });
     load();
   }
 
   async function remove(id: string) {
-    if (required && verified.length <= 1) return setMsg({ error: "Your company requires an authenticator app, so you can't remove the last one." });
+    if (required && verified.length <= 1) return setMsg({ error: "Signing in needs an authenticator app, so add a new one before removing the last." });
     setBusy(true);
     const { error } = await supabase.auth.mfa.unenroll({ factorId: id });
     setBusy(false);
@@ -60,9 +61,6 @@ export function TwoFactor({ required }: { required: boolean }) {
 
   return (
     <div className="we-stack">
-      {required && !verified.length && (
-        <div className="we-banner we-banner--info" role="status">Your company asks everyone to use an authenticator app. Set it up below to continue.</div>
-      )}
       {msg.error && <div className="we-banner we-banner--error" role="alert">{msg.error}</div>}
       {msg.ok && <div className="we-banner we-banner--ok" role="status">{msg.ok}</div>}
       {factors === null ? (

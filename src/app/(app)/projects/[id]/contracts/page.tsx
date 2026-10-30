@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { ItemStatus } from "@/components/StatusChip";
-import { getMe } from "@/lib/data";
+import { getMe, acts } from "@/lib/data";
 import { docHref, docRef } from "@/lib/docs";
 import { date, money, pct } from "@/lib/format";
+import { getScope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addContract, recordPayment } from "../actions";
 
@@ -23,15 +24,20 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
     supabase.from("phases").select("code, name").eq("project_id", id).order("code"),
     supabase.from("payments_out").select("certificate_id, amount_egp").eq("project_id", id),
   ]);
-  const { data: register } = await supabase
+  const scope = await getScope(id);
+  let rq = supabase
     .from("contracts")
-    .select("id, code, contractor, kind, status, signed_on, start_date, finish_date, retention_pct, advance_pct, performance_bond_pct, vat_pct, defects_months, payment_terms, contact_name, contact_phone")
+    .select("id, code, contractor, kind, status, signed_on, start_date, finish_date, retention_pct, advance_pct, performance_bond_pct, vat_pct, defects_months, payment_terms, contact_name, contact_phone, phase_id")
     .eq("project_id", id)
     .order("code");
-  const rows = (bal ?? []) as Balance[];
+  // Contracts belong to a phase (or the whole project); a phase choice shows its own and project-wide ones.
+  if (scope.phase) rq = rq.or(`phase_id.eq.${scope.phase},phase_id.is.null`);
+  const { data: register } = await rq;
+  const inScope = new Set((register ?? []).map((r) => r.code));
+  const rows = ((bal ?? []) as Balance[]).filter((b) => !scope.phase || inScope.has(b.code));
   const paidBy = new Map<string, number>();
   for (const p of paid ?? []) if (p.certificate_id) paidBy.set(p.certificate_id, (paidBy.get(p.certificate_id) ?? 0) + Number(p.amount_egp));
-  const canAdd = me?.is_admin || ["procurement", "pm"].includes(me?.department ?? "");
+  const canAdd = acts(me, ["procurement", "pm"]);
   const isFinance = me?.is_admin || me?.department === "finance";
   const toPay = (certs ?? []).filter((c) => ["approved", "paid"].includes(c.status));
 

@@ -22,7 +22,7 @@ export default async function NewDoc({
   if (!project && projects.length === 1) redirect(`/docs/${slug}/new?project=${projects[0]!.id}`);
   const p = projects.find((x) => x.id === project);
 
-  if (!canRaise(d, me?.department, !!me?.is_admin)) {
+  if (!canRaise(d, me)) {
     return (
       <>
         <h1>New {d.name.toLowerCase()}</h1>

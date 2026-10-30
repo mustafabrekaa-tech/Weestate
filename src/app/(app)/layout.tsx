@@ -2,9 +2,11 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppNav } from "@/components/AppNav";
+import { MenuCloser } from "@/components/MenuCloser";
+import { DOC_MODULE, TAB_MODULE } from "@/lib/access";
 import { brandStyle, getBrand } from "@/lib/brand";
-import { getMe, type Department, type QueueItem } from "@/lib/data";
-import { canRaise, DOCS, docByType } from "@/lib/docs";
+import { getMe, type Department, type QueueItem, acts } from "@/lib/data";
+import { docBySlug, docByType } from "@/lib/docs";
 import { createClient } from "@/lib/supabase/server";
 
 // Which part of the business each workflow belongs to, for the menu.
@@ -22,26 +24,37 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!me) redirect("/login");
 
   const supabase = await createClient();
-  const [{ data: depts }, { data: queue }, { data: projects }, { data: company }, brand] = await Promise.all([
+  const [{ data: depts }, { data: queue }, { data: projects }, { data: company }, brand, { data: hiddenRows }, { data: ws }] = await Promise.all([
     supabase.from("departments").select("*").order("sort"),
     supabase.from("work_queue").select("doc_type, department, overdue, company_id").eq("company_id", me.company_id ?? ""),
     supabase.from("projects").select("id, name").eq("company_id", me.company_id ?? "").order("name"),
     supabase.from("companies").select("name, logo_url, brand_color, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
     getBrand(),
+    supabase.from("hidden_modules").select("module").eq("company_id", me.company_id ?? "").eq("department", me.department ?? ""),
+    supabase.rpc("my_workspace").maybeSingle<{ status: string; trial_ends: string | null }>(),
   ]);
+  // Admins see everything; everyone else loses the sections hidden from their department.
+  const hidden = new Set(me.is_admin || me.is_platform_admin ? [] : (hiddenRows ?? []).map((r) => r.module as string));
+  const suspended = ws?.status === "suspended" && !me.is_platform_admin;
 
-  // A company that requires an authenticator app sends people to set one up first.
+  // Opening a hidden section by its address shows a note instead of the page.
   const path = (await headers()).get("x-pathname") ?? "";
-  if (company?.require_mfa && !path.startsWith("/account")) {
-    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    if (aal?.nextLevel !== "aal2") redirect("/account#security");
-  }
+  const seg = path.split("/");
+  const section =
+    seg[1] === "docs" ? DOC_MODULE[docBySlug(seg[2] ?? "")?.type ?? ""]
+    : seg[1] === "projects" && seg[3] ? TAB_MODULE[seg[3]]
+    : seg[1] === "import" ? "import"
+    : seg[1] === "directory" ? (seg[2] === "suppliers" ? "procurement" : "sales")
+    : seg[1] === "departments" && seg[2] !== me.department ? "departments"
+    : undefined;
+  const blocked = !!section && hidden.has(section);
+  // On a company's own address, only that company's people (and WE-estate staff) get in.
+  const elsewhere = !!brand.company && brand.company.id !== me.company_id && !me.is_platform_admin;
 
   const items = (queue ?? []) as Pick<QueueItem, "doc_type" | "department" | "overdue">[];
   const mine = items.filter((q) => q.department === me.department);
   const initials = (me.full_name || me.email).split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((s) => s[0]!.toUpperCase()).join("");
-  const raise = DOCS.filter((d) => canRaise(d, me.department, me.is_admin));
-  const canSetup = me.is_admin || ["pm", "cost_control"].includes(me.department ?? "");
+  const canSetup = acts(me, ["pm", "cost_control"]);
   const waiting = (type: string) => items.filter((q) => q.doc_type === type);
 
   const groups = [
@@ -52,10 +65,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(canSetup ? [{ href: "/projects/new", label: "+ New project" }] : []),
       ],
     },
-    ...AREAS.map((a) => ({
+    ...AREAS.filter((a) => !hidden.has(a.key)).map((a) => ({
       key: a.key, label: a.label, icon: a.icon,
       items: [
-        ...a.docs.map((t) => {
+        ...a.docs.filter((t) => !hidden.has(DOC_MODULE[t] ?? "")).map((t) => {
           const d = docByType(t)!;
           const w = waiting(t);
           return { href: `/docs/${d.slug}`, label: d.plural, count: w.length, late: w.some((q) => q.overdue) };
@@ -65,7 +78,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     })),
     {
       key: "departments", label: "Department queues", icon: "teams" as const,
-      items: ((depts ?? []) as Department[]).map((d) => {
+      items: ((depts ?? []) as Department[]).filter((d) => !hidden.has("departments") || d.code === me.department).map((d) => {
         const w = items.filter((q) => q.department === d.code);
         return { href: `/departments/${d.code}`, label: d.name, count: w.length, late: w.some((q) => q.overdue) };
       }),
@@ -74,7 +87,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? [{
           key: "admin", label: "Company admin", icon: "admin" as const,
           items: [
-            { href: "/admin/people", label: "People" },
+            { href: "/admin/people", label: "People and access" },
+            { href: "/admin/permissions", label: "What each department sees" },
             { href: "/admin/limits", label: "Approval limits" },
             { href: "/admin/workflows", label: "Workflow steps" },
             { href: "/admin/company", label: "Company, branding and security" },
@@ -85,8 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       ? [{
           key: "platform", label: `${brand.appName} portal`, icon: "globe" as const,
           items: [
-            { href: "/platform", label: "Companies and web addresses" },
-            { href: "/platform/branding", label: `${brand.appName} branding` },
+            { href: "/platform", label: "Admin portal" },
           ],
         }]
       : []),
@@ -108,15 +121,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </Link>
         <span className="we-appbar__project">{company?.name ?? "Projects"}</span>
         <span className="we-appbar__spacer" />
-        {raise.length > 0 && (
-          <details className="we-menu">
-            <summary className="we-btn we-btn--primary we-btn--sm">+ New</summary>
-            <div className="we-menu__list">
-              {raise.map((d) => <Link key={d.type} href={`/docs/${d.slug}/new`}>{d.name}</Link>)}
-            </div>
-          </details>
-        )}
-        <Link className="we-link we-hide-sm" href="/import">Import Excel</Link>
         <details className="we-menu">
           <summary className="we-avatar" title={me.full_name || me.email}>{initials}</summary>
           <div className="we-menu__list we-menu__list--right">
@@ -127,13 +131,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </details>
       </header>
+      <MenuCloser />
       <input type="checkbox" id="we-menu" hidden />
       <div className="we-shell">
         <AppNav
           top={[
             { href: "/", label: "Dashboard and map" },
             { href: "/my-work", label: "Waiting on me", count: mine.length, late: mine.some((q) => q.overdue) },
-            { href: "/import", label: "Import from Excel" },
+            ...(hidden.has("import") ? [] : [{ href: "/import", label: "Import from Excel" }]),
           ]}
           groups={groups}
         />
@@ -148,7 +153,29 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               You are signed in but not in a department yet. Ask an admin to add you, then your work shows up here.
             </div>
           )}
-          {children}
+          {elsewhere ? (
+            <section className="we-card we-stack" style={{ maxWidth: 560 }}>
+              <h1 style={{ margin: 0 }}>Wrong workspace</h1>
+              <p style={{ margin: 0 }}>This address belongs to {brand.company!.name}, and your account is with another company. Sign out and use your own company&apos;s address.</p>
+              <form action="/auth/signout" method="post"><button className="we-btn we-btn--secondary we-btn--sm">Sign out</button></form>
+            </section>
+          ) : suspended ? (
+            <section className="we-card we-stack" style={{ maxWidth: 560 }}>
+              <h1 style={{ margin: 0 }}>This workspace is paused</h1>
+              <p style={{ margin: 0 }}>
+                {company?.name ?? "Your company"}&apos;s {brand.appName} workspace is paused, so projects can&apos;t be opened right now.
+                Your data is kept safe. Ask your admin, or contact {brand.appName}{brand.supportEmail ? ` at ${brand.supportEmail}` : ""}.
+              </p>
+            </section>
+          ) : blocked ? (
+            <section className="we-card we-stack" style={{ maxWidth: 560 }}>
+              <h1 style={{ margin: 0 }}>Not part of your work</h1>
+              <p style={{ margin: 0 }}>Your admin has kept this section out of your department&apos;s menu. Ask them if you need it.</p>
+              <div><Link className="we-btn we-btn--secondary we-btn--sm" href="/">Back to the dashboard</Link></div>
+            </section>
+          ) : (
+            children
+          )}
         </main>
       </div>
     </>

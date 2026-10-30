@@ -1,15 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
-export type Profile = {
-  id: string;
-  full_name: string;
-  email: string;
-  department: string | null;
-  is_admin: boolean;
-  is_platform_admin: boolean;
-  company_id: string | null;
-  phone: string;
-};
+export { acts, type Profile } from "@/lib/access";
+import type { Profile } from "@/lib/access";
 
 export type QueueItem = {
   doc_type: string;

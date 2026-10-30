@@ -1,7 +1,8 @@
 import { Fragment } from "react";
 import { ActionForm } from "@/components/ActionForm";
-import { getMe } from "@/lib/data";
+import { getMe, acts } from "@/lib/data";
 import { money } from "@/lib/format";
+import { getScope, scoped } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addBoqItem } from "../actions";
 
@@ -12,14 +13,14 @@ export default async function BoqPage({ params }: { params: Promise<{ id: string
   const supabase = await createClient();
   const me = await getMe();
   const [{ data }, { data: codes }, { data: phases }] = await Promise.all([
-    supabase.from("boq_items").select("*, cost_codes(code)").eq("project_id", id).order("sort").order("code").limit(5000),
+    scoped(supabase.from("boq_items").select("*, cost_codes(code)").eq("project_id", id).order("sort").order("code").limit(5000), await getScope(id), { building: true }),
     supabase.from("cost_codes").select("code, name, parent_code").order("code"),
     supabase.from("phases").select("code, name").eq("project_id", id).order("code"),
   ]);
   const items = (data ?? []) as Item[];
   const sections = [...new Set(items.map((i) => i.section || "General"))];
   const total = items.reduce((s, i) => s + Number(i.amount_egp), 0);
-  const canEdit = me?.is_admin || ["tech_office", "cost_control"].includes(me?.department ?? "");
+  const canEdit = acts(me, ["tech_office", "cost_control"]);
 
   return (
     <>

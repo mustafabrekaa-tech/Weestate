@@ -303,3 +303,89 @@ export async function removeModel(id: string, model: string): Promise<ActionResu
   if (error) return { error: error.message };
   return done(id, "site", "Model removed.");
 }
+
+// Phases, zones and buildings ---------------------------------------------------------------------
+export async function saveZone(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const code = str(form.get("code"));
+  if (!code) return { error: "Give the zone a code, such as Z1." };
+  const row = { project_id: id, code, name: str(form.get("name")), phase_id: str(form.get("phase_id")) || null };
+  const zid = str(form.get("zone_id"));
+  const { error } = zid
+    ? await supabase.from("zones").update(row).eq("id", zid).eq("project_id", id)
+    : await supabase.from("zones").insert(row);
+  if (error) return { error: error.code === "23505" ? "Another zone already uses that code." : denied(error, "the PM, Technical office or Cost control") };
+  return done(id, "structure", "Zone saved.");
+}
+
+export async function removeZone(id: string, zone: string, _: ActionResult): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("zones").delete().eq("id", zone).eq("project_id", id);
+  if (error) return { error: denied(error, "the PM, Technical office or Cost control") };
+  return done(id, "structure", "Zone removed. Its buildings and units stay, without a zone.");
+}
+
+export async function editBuilding(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const code = str(form.get("code"));
+  if (!code) return { error: "Give the building a code, such as B01." };
+  const floors = num(form.get("floors")), h = num(form.get("floor_height_m"));
+  if (Number.isNaN(floors) || Number.isNaN(h)) return { error: "Floors and floor height must be numbers." };
+  const row = {
+    project_id: id, code, name: str(form.get("name")) || code,
+    phase_id: str(form.get("phase_id")) || null, zone_id: str(form.get("zone_id")) || null,
+    floors: floors ?? 1, ...(h != null ? { floor_height_m: h } : {}),
+  };
+  const bid = str(form.get("building_id"));
+  const { error } = bid
+    ? await supabase.from("buildings").update(row).eq("id", bid).eq("project_id", id)
+    : await supabase.from("buildings").insert(row);
+  if (error) return { error: error.code === "23505" ? "Another building already uses that code." : denied(error, "the PM or Cost control") };
+  return done(id, "structure", "Building saved.");
+}
+
+export async function removeBuilding(id: string, building: string, _: ActionResult): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("buildings").delete().eq("id", building).eq("project_id", id);
+  if (error) return { error: denied(error, "the PM or Cost control") };
+  return done(id, "structure", "Building removed. Its units stay, without a building.");
+}
+
+// Moves a batch of units (by code pattern, range and type) into a phase, zone or building.
+export async function assignUnits(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const prefix = str(form.get("prefix")), from = str(form.get("from")), to = str(form.get("to")), type = str(form.get("unit_type"));
+  if (!prefix && !from && !to && !type) return { error: "Say which units: a code start, a range or a type." };
+  const set: Record<string, string | number | null> = {};
+  for (const k of ["phase_id", "zone_id", "building_id"]) {
+    const v = str(form.get(k));
+    if (v === "none") set[k] = null;
+    else if (v) set[k] = v;
+  }
+  const floor = num(form.get("floor"));
+  if (Number.isNaN(floor)) return { error: "Floor must be a number." };
+  if (floor != null) set.floor = floor;
+  if (!Object.keys(set).length) return { error: "Choose where the units go." };
+  // A building brings its phase and zone along unless they were chosen.
+  if (set.building_id) {
+    const { data: b } = await supabase.from("buildings").select("phase_id, zone_id").eq("id", set.building_id).single();
+    if (b && !("phase_id" in set) && b.phase_id) set.phase_id = b.phase_id;
+    if (b && !("zone_id" in set) && b.zone_id) set.zone_id = b.zone_id;
+  }
+  let q = supabase.from("units").update(set).eq("project_id", id);
+  if (prefix) q = q.ilike("code", `${prefix.replace(/[%_]/g, "")}%`);
+  if (from) q = q.gte("code", from);
+  if (to) q = q.lte("code", to);
+  if (type) q = q.eq("unit_type", type);
+  const { data, error } = await q.select("id");
+  if (error) return { error: denied(error, "the PM, Cost control or Sales") };
+  if (!data?.length) return { error: "No units matched. Check the code start or range." };
+  return done(id, "structure", `${data.length} units moved.`);
+}
+
+export async function saveLayout(id: string, data: unknown): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data: n, error } = await supabase.rpc("save_layout", { p_project: id, p_data: data });
+  if (error) return { error: error.message };
+  return done(id, "site", `Layout saved (${n} parts). Redraw any outline from the panel when you have the real one.`);
+}

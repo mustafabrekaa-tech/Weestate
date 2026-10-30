@@ -59,7 +59,7 @@ export default async function DocList({
           <div className="we-eyebrow">Workflows</div>
           <h1>{d.plural}</h1>
         </div>
-        {canRaise(d, me?.department, !!me?.is_admin) && (
+        {canRaise(d, me) && (
           <Link className="we-btn we-btn--primary" href={`/docs/${slug}/new${project ? `?project=${project}` : ""}`}>
             New {d.name.toLowerCase()}
           </Link>

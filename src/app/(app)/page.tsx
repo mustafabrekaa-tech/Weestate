@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Kpis, type ProjectStatus } from "@/components/Kpis";
 import { QueueTable } from "@/components/QueueTable";
 import { SiteMap } from "@/components/SiteMap";
-import { getMe, sortQueue, type QueueItem } from "@/lib/data";
+import { getMe, sortQueue, type QueueItem, acts } from "@/lib/data";
 import { date } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -26,7 +26,7 @@ export default async function Overview() {
       sub: `SPI ${p.spi ?? "–"} · CPI ${p.cpi ?? "–"} · ${p.unit_count} units`,
       href: `/projects/${p.id}`,
     }));
-  const canSetup = me?.is_admin || ["pm", "cost_control"].includes(me?.department ?? "");
+  const canSetup = acts(me, ["pm", "cost_control"]);
 
   return (
     <>

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { Kpi } from "@/components/Kpis";
-import { getMe } from "@/lib/data";
+import { getMe, acts as actsFor } from "@/lib/data";
 import { date, money, pct } from "@/lib/format";
+import { getScope, scoped } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addActivityProgress, addPhaseProgress } from "../actions";
 
@@ -32,10 +33,10 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
     supabase.from("phases").select("id, code, name").eq("project_id", id).order("code"),
     supabase.from("progress_updates").select("*, phases(name)").eq("project_id", id).order("period", { ascending: false }).limit(60),
     supabase.from("schedule_versions").select("*").eq("project_id", id).order("created_at"),
-    supabase.from("activities").select("*").eq("project_id", id).order("start_date").limit(3000),
+    scoped(supabase.from("activities").select("*").eq("project_id", id).order("start_date").limit(3000), await getScope(id), { building: true }),
     supabase.from("activity_progress").select("activity_id, period, actual_pct").eq("project_id", id).order("period"),
   ]);
-  const canEnter = me?.is_admin || ["site", "cost_control", "pm"].includes(me?.department ?? "");
+  const canEnter = actsFor(me, ["site", "cost_control", "pm"]);
   const baseline = (versions ?? []).find((v) => v.is_baseline);
   const activities = ((acts ?? []) as Activity[]).filter((a) => !baseline || a.version_id === baseline.id);
   const latest = new Map<string, AP>();

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
-import { getMe } from "@/lib/data";
+import { getMe, acts } from "@/lib/data";
 import { date, money } from "@/lib/format";
+import { getScope, scoped } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addUnitType, generateUnits, setUnitStatus } from "../actions";
 
@@ -26,6 +27,8 @@ export default async function UnitsPage({
   let uq = supabase.from("units").select("id, code, unit_type, area_m2, garden_m2, bedrooms, bathrooms, view, finishing, delivery_date, floor, status, list_price_egp, phases(name), buildings(code)").eq("project_id", id).order("code").limit(300);
   if (status) uq = uq.eq("status", status);
   if (phase) uq = uq.eq("phase_id", phase);
+  const scope = await getScope(id);
+  uq = scoped(uq, scope, { zone: true, building: true });
   if (q) uq = uq.ilike("code", `%${q}%`);
   const [{ data: summary }, { data: phases }, { data: types }, { data: units }] = await Promise.all([
     supabase.from("unit_summary").select("*").eq("project_id", id),
@@ -33,8 +36,8 @@ export default async function UnitsPage({
     supabase.from("unit_types").select("*").eq("project_id", id).order("code"),
     uq,
   ]);
-  const canSetup = me?.is_admin || ["pm", "cost_control", "sales"].includes(me?.department ?? "");
-  const canStatus = me?.is_admin || ["pm", "cost_control", "sales", "handover"].includes(me?.department ?? "");
+  const canSetup = acts(me, ["pm", "cost_control", "sales"]);
+  const canStatus = acts(me, ["pm", "cost_control", "sales", "handover"]);
   const cell = (ph: string | null, st: string) =>
     (summary ?? []).filter((s) => (ph === null || s.phase_id === ph) && s.status === st).reduce((a, s) => a + s.units, 0);
   const href = (o: Record<string, string | undefined>) => {

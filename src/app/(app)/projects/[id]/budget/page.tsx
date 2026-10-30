@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Fragment } from "react";
 import { ActionForm } from "@/components/ActionForm";
 import { Kpi } from "@/components/Kpis";
-import { getMe } from "@/lib/data";
+import { getMe, acts } from "@/lib/data";
 import { money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { approveBudget, saveBudgetLine } from "../actions";
@@ -25,7 +25,7 @@ export default async function BudgetPage({ params }: { params: Promise<{ id: str
   ]);
   const lines = (report ?? []) as Line[];
   const current = (budgets ?? []).find((b) => b.status !== "superseded");
-  const canEdit = me?.is_admin || ["cost_control", "finance"].includes(me?.department ?? "");
+  const canEdit = acts(me, ["cost_control", "finance"]);
 
   // Roll sub-codes up to their main code.
   const main = new Map<string, Line & { children: Line[] }>();
