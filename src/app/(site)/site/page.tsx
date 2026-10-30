@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { EnquiryForm } from "@/components/SiteForms";
 import { getBrand } from "@/lib/brand";
 import { money } from "@/lib/format";
+import { getSiteInfo, telLink, waLink } from "@/lib/siteinfo";
 import { createClient } from "@/lib/supabase/server";
 import { sendEnquiry } from "./actions";
 
@@ -32,8 +33,9 @@ const FAQ: [string, string][] = [
 
 export default async function Landing() {
   const supabase = await createClient();
-  const [b, { data: plans }] = await Promise.all([
+  const [b, info, { data: plans }] = await Promise.all([
     getBrand(),
+    getSiteInfo(),
     supabase.from("plans").select("code, name, price_egp, max_users, max_projects, features").eq("active", true).order("sort"),
   ]);
   const icon = (d: string) => (
@@ -218,7 +220,13 @@ export default async function Landing() {
             <span className="ws-kicker">Contact</span>
             <h2>See it with your own project</h2>
             <p>Tell us a little about your company. We&apos;ll set up a demo with one of your projects, so your team sees their own numbers, not a sample.</p>
-            {b.supportEmail && <p>Or email <a href={`mailto:${b.supportEmail}`}>{b.supportEmail}</a>.</p>}
+            <ul className="ws-reach">
+              {(info.sales_email || info.support_email) && <li><span>Email</span><a href={`mailto:${info.sales_email || info.support_email}`}>{info.sales_email || info.support_email}</a></li>}
+              {info.phone && <li><span>Phone</span><a href={telLink(info.phone)}>{info.phone}</a></li>}
+              {info.whatsapp && <li><span>WhatsApp</span><a href={waLink(info.whatsapp)} target="_blank" rel="noreferrer">{info.whatsapp}</a></li>}
+              {info.address && <li><span>Office</span>{info.map_url ? <a href={info.map_url} target="_blank" rel="noreferrer">{info.address}</a> : info.address}</li>}
+              {info.hours && <li><span>Hours</span>{info.hours}</li>}
+            </ul>
           </div>
           <div className="ws-card ws-card--form"><EnquiryForm action={sendEnquiry} /></div>
         </div>

@@ -25,6 +25,7 @@ const LINKS: [string, string, Icon][] = [
   ["/platform/users", "Users & access", "users"],
   ["/platform/plans", "Plans & pricing", "plans"],
   ["/platform/domains", "Web addresses", "domains"],
+  ["/platform/website", "Website", "site"],
   ["/platform/branding", "App branding", "brand"],
   ["/platform/email", "Email", "mail"],
 ];

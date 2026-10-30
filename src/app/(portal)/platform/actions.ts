@@ -183,3 +183,24 @@ export async function sendTestEmail(_: ActionResult, form: FormData): Promise<Ac
   }
   return { ok: `Sent to ${to}. Check the inbox (and junk, the first time).` };
 }
+
+const SITE_FIELDS = ["support_email", "sales_email", "phone", "whatsapp", "address", "map_url", "hours",
+  "linkedin", "instagram", "facebook", "tiktok", "x_url", "youtube", "about_text", "privacy_text", "terms_text", "refund_text"] as const;
+
+// Contact details, social links and text pages on the public website.
+export async function saveWebsite(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const row: Record<string, string> = {};
+  for (const k of SITE_FIELDS) {
+    const v = String(form.get(k) ?? "").trim();
+    if (v && /^(linkedin|instagram|facebook|tiktok|x_url|youtube|map_url)$/.test(k) && !/^https:\/\//.test(v)) {
+      return { error: "Links must start with https://" };
+    }
+    row[k] = k.endsWith("_text") ? v.slice(0, 40000) : v.slice(0, 300);
+  }
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("platform_settings").update({ ...row, updated_at: new Date().toISOString() }).eq("id", true).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Only WE-estate staff can change this." };
+  revalidatePath("/", "layout");
+  return { ok: "Website saved." };
+}

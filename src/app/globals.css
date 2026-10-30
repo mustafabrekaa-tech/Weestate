@@ -595,15 +595,34 @@ a.we-pcard:hover { border-color: var(--gold); }
 .ws-signin .ws-card { max-width: 460px; width: 100%; display: grid; gap: 16px; }
 .ws-signin h1 { font: 700 30px/36px var(--font-display); margin: 0; }
 .ws-signin p { margin: 0; }
-.ws-foot { background: var(--ws-night); color: #c3ccd3; padding: 48px 0 24px; }
-.ws-foot__in { display: flex; justify-content: space-between; gap: 40px; flex-wrap: wrap; }
-.ws-foot__in p { margin: 12px 0 0; font-size: 14px; }
-.ws-foot__cols { display: flex; gap: 56px; flex-wrap: wrap; }
-.ws-foot__cols div { display: grid; gap: 8px; align-content: start; font-size: 14px; }
-.ws-foot__cols b { color: #fff; }
-.ws-foot__cols a { text-decoration: none; color: #c3ccd3; }
-.ws-foot__cols a:hover { color: #fff; }
-.ws-foot__legal { border-top: 1px solid rgba(255,255,255,.1); margin-top: 32px; padding-top: 18px; font-size: 13px; color: #8d98a1; }
+.ws-foot { background: var(--ws-night); color: #c3ccd3; padding: 56px 0 24px; }
+.ws-foot__in { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 40px; }
+.ws-foot__about p { margin: 16px 0 0; font-size: 15px; line-height: 1.6; }
+.ws-foot__contact { display: grid; gap: 6px; margin-top: 18px; font-size: 15px; }
+.ws-foot__contact a, .ws-foot__contact span { color: #e6ebef; text-decoration: none; }
+.ws-foot__contact a:hover { color: #fff; }
+.ws-foot__contact .ws-foot__mail { color: var(--ws-gold, #c9a24a); font-weight: 600; }
+.ws-foot__contact .ws-foot__dim { color: #9aa6af; }
+.ws-foot__social { display: flex; gap: 8px; margin-top: 18px; }
+.ws-foot__social a { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.08); color: #fff; }
+.ws-foot__social a:hover { background: var(--ws-gold, #c9a24a); color: var(--ws-night); }
+.ws-foot__col { display: grid; gap: 10px; align-content: start; font-size: 15px; }
+.ws-foot__col b { color: #8d98a1; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; font-weight: 600; margin-bottom: 4px; }
+.ws-foot__col a { text-decoration: none; color: #e6ebef; }
+.ws-foot__col a:hover { color: #fff; }
+.ws-foot__legal { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; border-top: 1px solid rgba(255,255,255,.1); margin-top: 40px; padding-top: 18px; font-size: 13px; color: #8d98a1; }
+.ws-chat { position: fixed; right: 20px; bottom: 20px; z-index: 30; display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; background: var(--ws-night); color: #fff; font-weight: 600; font-size: 15px; text-decoration: none; box-shadow: 0 8px 24px rgba(0,0,0,.25); border: 1px solid rgba(255,255,255,.12); }
+.ws-chat:hover { background: #000; }
+.ws-reach { list-style: none; padding: 0; margin: 20px 0 0; display: grid; gap: 10px; font-size: 15px; }
+.ws-reach li { display: flex; gap: 12px; }
+.ws-reach span { width: 84px; flex: none; color: #9aa6af; }
+.ws-reach a { color: #fff; }
+.ws-legal { max-width: 760px; }
+.ws-legal h1 { font-family: var(--font-display, inherit); font-size: 36px; margin: 0 0 20px; }
+.ws-legal h2 { font-size: 20px; margin: 28px 0 8px; }
+.ws-legal p { font-size: 16px; line-height: 1.7; color: #3c4852; margin: 0 0 14px; }
+@media (max-width: 980px) { .ws-foot__in { grid-template-columns: 1fr 1fr 1fr; } .ws-foot__about { grid-column: 1 / -1; } }
+@media (max-width: 640px) { .ws-foot__in { grid-template-columns: 1fr 1fr; } .ws-chat { right: 12px; bottom: 12px; padding: 10px 14px; } }
 @media (max-width: 980px) {
   .ws-hero__in, .ws-split, .ws-faq { grid-template-columns: 1fr; }
   .ws-features, .ws-plans, .ws-cards3 { grid-template-columns: 1fr 1fr; }
