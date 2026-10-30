@@ -8,7 +8,7 @@ export async function saveProfile(id: string, _: ActionResult, form: FormData): 
   const supabase = await createClient();
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name: String(form.get("full_name") ?? "").trim(), phone: String(form.get("phone") ?? "").trim() })
+    .update({ full_name: String(form.get("full_name") ?? "").trim(), phone: String(form.get("phone") ?? "").trim(), email_alerts: form.get("email_alerts") === "on" })
     .eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/", "layout");

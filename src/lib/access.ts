@@ -12,6 +12,7 @@ export type Profile = {
   read_only: boolean;
   all_projects: boolean;
   extra_roles: string[];
+  email_alerts?: boolean;
 };
 
 // Whether the person acts for any of these departments (admins act for all;

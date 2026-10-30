@@ -30,6 +30,10 @@ export default async function Account() {
               <dt>Department</dt><dd>{dept?.name ?? "Not set"}</dd>
               <dt>Role</dt><dd>{me.is_platform_admin ? "WE-estate staff" : me.is_admin ? "Admin" : "Member"}</dd>
             </dl>
+            <label className="we-row" style={{ gap: 8 }}>
+              <input type="checkbox" name="email_alerts" defaultChecked={me.email_alerts !== false} />
+              Email me when something is waiting on me, or when my documents are returned or finished
+            </label>
             <div><button className="we-btn we-btn--primary">Save</button></div>
           </ActionForm>
         </section>

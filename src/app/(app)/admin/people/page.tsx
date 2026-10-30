@@ -5,6 +5,7 @@ import { ActionForm } from "@/components/ActionForm";
 import { getMe, type Department, type Profile } from "@/lib/data";
 import { date } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { mailReady } from "@/lib/mail";
 import { addPerson, resetAuthenticator, resetPassword, updatePerson } from "../actions";
 
 export const metadata: Metadata = { title: "People and access" };
@@ -133,6 +134,7 @@ export default async function People({ searchParams }: { searchParams: Promise<{
               <input id="password" name="password" className="we-input we-mono" placeholder="Made for you if empty" />
             </div>
             <label className="we-row" style={{ gap: 8 }}><input type="checkbox" name="is_admin" /> Admin</label>
+            {mailReady() && <label className="we-row" style={{ gap: 8 }}><input type="checkbox" name="send_email" defaultChecked /> Email them their sign-in details</label>}
             <span className="we-help">They sign in with the temporary password, then set up an authenticator app. Open them in the list to add extra roles or limit their projects.</span>
             <div><button className="we-btn we-btn--primary">Add person</button></div>
           </ActionForm>

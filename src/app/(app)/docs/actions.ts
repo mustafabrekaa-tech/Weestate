@@ -2,9 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { readField } from "@/components/FieldInput";
-import type { ActionResult } from "@/lib/data";
+import { getMe, type ActionResult } from "@/lib/data";
 import { docBySlug, docHref } from "@/lib/docs";
+import { getBrand } from "@/lib/brand";
+import { esc, layout, mailReady, origin, trySend } from "@/lib/mail";
 import { createClient } from "@/lib/supabase/server";
 
 const LINE_ROWS = 8;
@@ -99,6 +102,7 @@ export async function docAction(type: string, id: string, _: ActionResult, form:
     p_comment: String(form.get("comment") ?? ""),
   });
   if (error) return { error: error.message };
+  if (form.get("action") !== "comment") await alert(type, id);
   revalidatePath("/", "layout");
   return { ok: data === "returned" ? "Returned." : data === "rejected" ? "Rejected." : "Done." };
 }
@@ -130,4 +134,50 @@ export async function deleteDraft(slug: string, id: string) {
   await supabase.from(d.table).delete().eq("id", id);
   revalidatePath("/", "layout");
   redirect(`/docs/${slug}`);
+}
+
+type Target = { email: string; full_name: string; why: string; doc_name: string; ref: string; title: string; project: string; step_name: string };
+
+const WHY: Record<string, (t: Target) => [string, string]> = {
+  waiting: (t) => [`Waiting on you: ${t.doc_name} ${t.ref}`, `${t.doc_name} ${t.ref} on ${t.project} is now at "${t.step_name}" and waiting on your department.`],
+  returned: (t) => [`Returned to you: ${t.doc_name} ${t.ref}`, `${t.doc_name} ${t.ref} on ${t.project} was returned to you for changes.`],
+  rejected: (t) => [`Rejected: ${t.doc_name} ${t.ref}`, `${t.doc_name} ${t.ref} on ${t.project} was rejected.`],
+};
+
+// Emails the people a document now waits on, or whoever raised it once it's
+// returned, rejected or finished. Sent after the response, so nobody waits.
+async function alert(type: string, id: string) {
+  if (!mailReady()) return;
+  const supabase = await createClient();
+  const { data } = await supabase.rpc("doc_mail_targets", { p_doc_type: type, p_id: id });
+  const targets = (data ?? []) as Target[];
+  if (!targets.length) return;
+  const [{ appName }, site, me, events] = await Promise.all([
+    getBrand(),
+    origin(),
+    getMe(),
+    supabase.from("workflow_events").select("comment").eq("doc_type", type).eq("doc_id", id).order("created_at", { ascending: false }).limit(1),
+  ]);
+  const comment = (events.data?.[0]?.comment as string | undefined) ?? "";
+  const href = `${site}${docHref(type, id)}`;
+  after(async () => {
+    for (const t of targets) {
+      const [subject, line] = (WHY[t.why] ?? ((x: Target) => [`Done: ${x.doc_name} ${x.ref}`, `${x.doc_name} ${x.ref} on ${x.project} has gone through every step.`]))(t);
+      await trySend({
+        to: t.email,
+        subject,
+        html: layout({
+          appName,
+          heading: subject,
+          body: [
+            `Hello ${esc(t.full_name.split(" ")[0] || "")},`,
+            esc(line) + (t.title ? `<br><b>${esc(t.title)}</b>` : ""),
+            ...(comment ? [`${esc(me?.full_name || "They")} wrote: <i>"${esc(comment)}"</i>`] : []),
+          ],
+          button: { href, label: "Open it" },
+          foot: "You can turn these emails off under My account.",
+        }),
+      });
+    }
+  });
 }

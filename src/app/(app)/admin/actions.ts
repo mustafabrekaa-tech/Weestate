@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/data";
 import { getBrand } from "@/lib/brand";
+import { esc, layout, mailReady, trySend } from "@/lib/mail";
 import { createClient } from "@/lib/supabase/server";
 import { connectDomain } from "@/lib/vercel";
 
@@ -32,7 +33,13 @@ export async function addPerson(company: string | null, _: ActionResult, form: F
   if (error) return { error: error.message };
   const row = (data as { temp_password: string }[])[0];
   revalidatePath("/admin/people");
-  return { ok: `Added ${s(form, "email")}. Their temporary password is ${row?.temp_password}. Send it to them; they change it under My account.` };
+  const email = s(form, "email");
+  if (mailReady() && row?.temp_password && form.get("send_email") === "on") {
+    const { data: c } = await supabase.from("companies").select("name, slug").eq("id", company ?? "").maybeSingle();
+    await welcome(email, s(form, "full_name"), row.temp_password, c);
+    return { ok: `Added ${email} and emailed them their sign-in details. Their temporary password is ${row.temp_password}.` };
+  }
+  return { ok: `Added ${email}. Their temporary password is ${row?.temp_password}. Send it to them; they change it under My account.` };
 }
 
 export async function updatePerson(_: ActionResult, form: FormData): Promise<ActionResult> {
@@ -222,8 +229,35 @@ export async function createWorkspace(_: ActionResult, form: FormData): Promise<
       p_password: null,
     });
     if (ue) return { error: `${note} The admin was not added: ${ue.message}` };
-    note += ` Admin ${s(form, "admin_email")} can sign in with the temporary password ${(data as { temp_password: string }[])[0]?.temp_password}.`;
+    const pw = (data as { temp_password: string }[])[0]?.temp_password ?? "";
+    note += ` Admin ${s(form, "admin_email")} can sign in with the temporary password ${pw}.`;
+    if (mailReady() && pw) {
+      await welcome(s(form, "admin_email"), s(form, "admin_name"), pw, { name: s(form, "name"), slug });
+      note += " We've emailed them their sign-in details.";
+    }
   }
   revalidatePath("/platform");
   return { ok: note };
+}
+
+// Sign-in details for someone just added, sent to their work email.
+async function welcome(email: string, name: string, password: string, c: { name: string; slug: string } | null) {
+  const { appName, rootDomain } = await getBrand();
+  const url = c?.slug ? `https://${c.slug}.${rootDomain}` : `https://${rootDomain}`;
+  await trySend({
+    to: email,
+    subject: `Your ${appName} account${c?.name ? ` at ${c.name}` : ""}`,
+    html: layout({
+      appName,
+      heading: `Welcome to ${appName}`,
+      body: [
+        `Hello ${esc(name.split(" ")[0] || "")},`,
+        `An account has been made for you${c?.name ? ` at <b>${esc(c.name)}</b>` : ""}. Sign in at <b>${esc(url.replace("https://", ""))}</b> with:`,
+        `Email: <b>${esc(email)}</b><br>Temporary password: <b style="font-family:Consolas,monospace">${esc(password)}</b>`,
+        "The first time you sign in you'll set up an authenticator app (Microsoft Authenticator or Google Authenticator) on your phone. Then change your password under My account.",
+      ],
+      button: { href: `${url}/login`, label: "Sign in" },
+      foot: "If you weren't expecting this, you can ignore it.",
+    }),
+  });
 }

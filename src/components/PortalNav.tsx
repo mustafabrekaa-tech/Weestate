@@ -13,6 +13,7 @@ const ICONS = {
   domains: "M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM3 10h14M10 3c2 2 3 4.5 3 7s-1 5-3 7c-2-2-3-4.5-3-7s1-5 3-7z",
   inbox: "M3 11h4l1 2h4l1-2h4M4 4h12l1 7v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z",
   site: "M3 4h14v12H3zM3 8h14M6 6h.01M8 6h.01",
+  mail: "M3 5h14v10H3zM3 5l7 6 7-6",
   brand: "M10 3a7 7 0 1 0 0 14c1 0 1.5-.7 1.5-1.5 0-.9-.8-1.3-.8-2.2 0-.9.8-1.6 1.7-1.6H14a3 3 0 0 0 3-3C17 5.6 13.9 3 10 3zM6.5 9h.01M9 6.5h.01M12.5 7h.01",
 };
 
@@ -25,6 +26,7 @@ const LINKS: [string, string, Icon][] = [
   ["/platform/plans", "Plans & pricing", "plans"],
   ["/platform/domains", "Web addresses", "domains"],
   ["/platform/branding", "App branding", "brand"],
+  ["/platform/email", "Email", "mail"],
 ];
 
 // The WE-estate staff portal's own top bar, separate from any company's app.

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { getBrand } from "@/lib/brand";
-import type { ActionResult } from "@/lib/data";
+import { getMe, type ActionResult } from "@/lib/data";
+import { esc, layout, mailFrom, sendMail } from "@/lib/mail";
 import { createClient } from "@/lib/supabase/server";
 import { connectDomain, domainState, removeDomain, vercelReady } from "@/lib/vercel";
 
@@ -163,4 +164,22 @@ export async function updateEnquiry(id: string, _: ActionResult, form: FormData)
   if (!data?.length) return { error: "Not saved." };
   revalidatePath("/platform", "layout");
   return { ok: "Saved." };
+}
+
+// Sends a test email from the app's mailbox, to check Microsoft 365 is set up.
+export async function sendTestEmail(_: ActionResult, form: FormData): Promise<ActionResult> {
+  const me = await getMe();
+  if (!me?.is_platform_admin) return { error: "Only WE-estate staff can do this." };
+  const to = s(form, "to") || me.email;
+  const { appName } = await getBrand();
+  try {
+    await sendMail({
+      to,
+      subject: `${appName} test email`,
+      html: layout({ appName, heading: "Email is working", body: [`This came from ${esc(mailFrom())} through Microsoft 365. Demo requests, approvals and new accounts will be emailed from here.`] }),
+    });
+  } catch (e) {
+    return { error: `Not sent: ${(e as Error).message}` };
+  }
+  return { ok: `Sent to ${to}. Check the inbox (and junk, the first time).` };
 }
