@@ -14,11 +14,12 @@ type Plan = { code: string; name: string; price_egp: number };
 export default async function Overview({ searchParams }: { searchParams: Promise<{ days?: string }> }) {
   const days = [7, 30, 90].includes(Number((await searchParams).days)) ? Number((await searchParams).days) : 30;
   const supabase = await createClient();
-  const [{ data: cos }, { data: st }, { data: plans }, brand] = await Promise.all([
+  const [{ data: cos }, { data: st }, { data: plans }, brand, { count: fresh }] = await Promise.all([
     supabase.rpc("portal_companies"),
     supabase.rpc("portal_stats", { p_days: days }).maybeSingle<Stats>(),
     supabase.from("plans").select("code, name, price_egp"),
     getBrand(),
+    supabase.from("enquiries").select("id", { count: "exact", head: true }).eq("status", "new"),
   ]);
   const all = (cos ?? []) as Workspace[];
   const s = st ?? { people: 0, signed_in: 0, without_mfa: 0, projects: 0, units: 0, new_companies: 0, staff: 0 };
@@ -42,6 +43,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
     if (w.max_users && w.people >= w.max_users) attention.push({ href: `/platform/companies/${w.id}`, text: `${w.name}: at its limit of ${w.max_users} people`, tone: "warn" });
     if (w.domain && w.domain_status !== "connected") attention.push({ href: `/platform/companies/${w.id}`, text: `${w.name}: ${w.domain} isn't live yet`, tone: "warn" });
   }
+  if (fresh) attention.unshift({ href: "/platform/enquiries", text: `${fresh} new website ${fresh === 1 ? "enquiry" : "enquiries"} to answer`, tone: "bad" });
   if (s.without_mfa) attention.push({ href: "/platform/users", text: `${s.without_mfa} people haven't set up their authenticator app yet`, tone: "warn" });
 
   return (

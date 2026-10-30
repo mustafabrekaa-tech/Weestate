@@ -153,3 +153,14 @@ export async function setStaff(userId: string, on: boolean, _: ActionResult): Pr
   revalidatePath("/platform/users");
   return { ok: on ? "Now WE-estate staff." : "Staff access removed." };
 }
+
+export async function updateEnquiry(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("enquiries")
+    .update({ status: s(form, "status") || "new", staff_notes: s(form, "staff_notes") })
+    .eq("id", id).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Not saved." };
+  revalidatePath("/platform", "layout");
+  return { ok: "Saved." };
+}

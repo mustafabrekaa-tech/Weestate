@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { getBrand } from "@/lib/brand";
+import { hostKind } from "@/lib/host";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
   const b = await getBrand();
+  // An address no company uses goes to the public website.
+  if (hostKind((await headers()).get("host") ?? "") === "company" && !b.company) redirect(`https://${b.rootDomain}`);
   return (
     <div className="we-login">
       <section className="we-login__brand">

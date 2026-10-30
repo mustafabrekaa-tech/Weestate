@@ -28,7 +28,7 @@ export default async function PortalLayout({ children }: { children: React.React
   return (
     <div className="we-portal">
       <MenuCloser />
-      <PortalNav appName={brand.appName} logo={brand.logo} who={me.full_name || me.email} />
+      <PortalNav appName={brand.appName} logo={brand.logo} who={me.full_name || me.email} root={brand.rootDomain} />
       <main className="we-portal__main">{children}</main>
     </div>
   );
