@@ -145,6 +145,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppNav
           top={[
             { href: "/", label: "Dashboard", icon: "chart" },
+            { href: "/portfolio", label: "Portfolio", icon: "projects" },
             { href: "/my-work", label: "Waiting on me", count: mine.length, late: mine.some((q) => q.overdue), icon: "inbox" },
           ]}
           projects={list}
