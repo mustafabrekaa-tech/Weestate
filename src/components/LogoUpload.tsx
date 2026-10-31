@@ -17,9 +17,9 @@ export function LogoUpload({ name, folder, value }: { name: string; folder: stri
     const ext = (f.name.split(".").pop() || "png").toLowerCase();
     const path = `${folder}/logo-${Date.now()}.${ext}`;
     const supabase = createClient();
-    const { error } = await supabase.storage.from("branding").upload(path, f, { contentType: f.type, upsert: true });
+    const { error } = await supabase.storage.from("branding").upload(path, f, { contentType: f.type });
     setBusy(false);
-    if (error) return setError(error.message.includes("row-level") ? "Only an admin can change the logo." : error.message);
+    if (error) return setError(error.message.includes("row-level") ? "The upload was refused. Ask WE-estate support to check your admin access." : error.message);
     setUrl(supabase.storage.from("branding").getPublicUrl(path).data.publicUrl);
   }
 

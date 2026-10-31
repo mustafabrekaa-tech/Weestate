@@ -119,6 +119,10 @@ export async function saveCompany(id: string, _: ActionResult, form: FormData): 
       logo_url: s(form, "logo_url"),
       currency: s(form, "currency") || "EGP",
       brand_color: form.get("default_color") === "on" ? "" : s(form, "brand_color").toLowerCase(),
+      brand_colors: form.get("default_color") === "on" ? null : {
+        accent: s(form, "accent_color").toLowerCase() || undefined,
+        dark: s(form, "dark_color").toLowerCase() || undefined,
+      },
       tagline: s(form, "tagline"),
     })
     .eq("id", id)

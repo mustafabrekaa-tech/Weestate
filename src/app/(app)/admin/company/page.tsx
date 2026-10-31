@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
+import { BrandColors } from "@/components/BrandColors";
 import { LogoUpload } from "@/components/LogoUpload";
 import { getBrand } from "@/lib/brand";
 import { getMe } from "@/lib/data";
@@ -33,17 +34,11 @@ export default async function CompanyPage() {
             <label>Logo</label>
             <LogoUpload name="logo_url" folder={me.company_id} value={c?.logo_url ?? ""} />
           </div>
-          <div className="we-field">
-            <label htmlFor="brand_color">Brand colour</label>
-            <div className="we-row" style={{ gap: 8, flexWrap: "nowrap" }}>
-              <input id="brand_color" name="brand_color" type="color" defaultValue={c?.brand_color || "#8a6420"} className="we-swatch" style={{ padding: 0, width: 44, height: 40 }} />
-              <label className="we-row" style={{ gap: 6, font: "400 14px var(--font-sans)", textTransform: "none", letterSpacing: 0 }}>
-                <input type="checkbox" name="default_color" defaultChecked={!c?.brand_color} /> Use WE-estate gold
-              </label>
-            </div>
-            <span className="we-help">Used for links, highlights and the active menu item.</span>
+          <div className="we-field" style={{ gridColumn: "1 / -1" }}>
+            <label>Brand colours</label>
+            <BrandColors value={{ main: c?.brand_color || "", accent: (c?.brand_colors as { accent?: string } | null)?.accent || "", dark: (c?.brand_colors as { dark?: string } | null)?.dark || "" }} useDefault={!c?.brand_color} />
           </div>
-          <div className="we-field" style={{ gridColumn: "span 2" }}>
+          <div className="we-field" style={{ gridColumn: "1 / -1" }}>
             <label htmlFor="tagline">Sign-in page message</label>
             <input id="tagline" name="tagline" className="we-input" defaultValue={c?.tagline} placeholder="Welcome to the M Squared project room." />
           </div>

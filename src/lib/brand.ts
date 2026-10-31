@@ -34,8 +34,21 @@ export const getBrand = cache(async (): Promise<Brand> => {
   };
 });
 
-// Overrides the gold brand tokens with a company or platform colour.
-export function brandStyle(color: string) {
-  if (!/^#[0-9a-f]{6}$/i.test(color)) return "";
-  return `:root{--brand:${color};--brand-hover:color-mix(in srgb,${color} 82%,#000);--brand-soft:color-mix(in srgb,${color} 12%,#fff);--focus-ring:${color};}`;
+const HEX = /^#[0-9a-f]{6}$/i;
+// Dark text or white text, whichever reads better on this colour.
+export function inkOn(hex: string) {
+  const n = parseInt(hex.slice(1), 16), c = [n >> 16, (n >> 8) & 255, n & 255].map((v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; });
+  const L = 0.2126 * c[0]! + 0.7152 * c[1]! + 0.0722 * c[2]!;
+  return L > 0.4 ? "#111827" : "#ffffff";
+}
+
+// Overrides the WE-estate tokens with a company's colours: main (links, highlights, active menu item),
+// accent (charts, progress bars) and dark (buttons and selected items).
+export function brandStyle(color: string, extra?: { accent?: string; dark?: string } | null) {
+  const v: string[] = [];
+  if (HEX.test(color)) v.push(`--brand:${color}`, `--brand-hover:color-mix(in srgb,${color} 82%,#000)`, `--brand-soft:color-mix(in srgb,${color} 12%,#fff)`, `--focus-ring:${color}`);
+  const a = extra?.accent, d = extra?.dark;
+  if (a && HEX.test(a)) v.push(`--gold:${a}`, `--gold-hover:color-mix(in srgb,${a} 85%,#000)`);
+  if (d && HEX.test(d)) v.push(`--steel:${d}`, `--steel-hover:color-mix(in srgb,${d} 85%,#000)`, `--on-steel:${inkOn(d)}`);
+  return v.length ? `:root{${v.join(";")};}` : "";
 }

@@ -1193,3 +1193,18 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
 .we-sel__foot button:hover { background: var(--surface-sunken, #f3f1ec); }
 /* in the console filter bar the button sits inside the labelled pill */
 .we-uc__sel .we-sel { border: 0; background: none; padding: 0; box-shadow: none; font: 500 14px/20px var(--font-sans); width: auto; min-width: 110px; }
+/* Brand colours (admin → company) */
+.we-brandcols { display: grid; gap: 12px; }
+.we-brandcols__rows { display: grid; gap: 8px; }
+.we-brandcols__rows.is-off { opacity: .5; }
+.we-brandcols__row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.we-brandcols__row .we-swatch { width: 44px; height: 40px; padding: 0; border: 1px solid var(--line-strong); border-radius: 6px; background: none; cursor: pointer; }
+.we-brandcols__row b { display: block; font: 600 14px/18px var(--font-sans); text-transform: none; letter-spacing: 0; color: var(--ink); }
+.we-brandcols__sugs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.we-brandcols__sug { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--line-strong); border-radius: 8px; padding: 4px 10px 4px 4px; background: #fff; cursor: pointer; }
+.we-brandcols__sug:hover { border-color: var(--steel); }
+.we-brandcols__sug i { width: 22px; height: 22px; display: block; }
+.we-brandcols__sug i:first-child { border-radius: 5px 0 0 5px; }
+.we-brandcols__sug i:nth-child(3) { border-radius: 0 5px 5px 0; margin-right: 8px; }
+.we-brandcols__sug span { font: 500 12.5px var(--font-sans); color: var(--ink); }
+.we-brandcols__preview { display: grid; gap: 6px; padding: 12px; border: 1px dashed var(--line-strong); border-radius: 8px; background: #fbfaf7; }

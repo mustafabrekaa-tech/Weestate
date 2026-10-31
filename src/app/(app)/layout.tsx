@@ -31,7 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     supabase.from("departments").select("*").order("sort"),
     supabase.from("work_queue").select("doc_type, department, overdue, company_id").eq("company_id", me.company_id ?? ""),
     supabase.from("projects").select("id, name, slug").eq("company_id", me.company_id ?? "").order("name"),
-    supabase.from("companies").select("name, logo_url, brand_color, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
+    supabase.from("companies").select("name, logo_url, brand_color, brand_colors, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
     getBrand(),
     supabase.from("hidden_modules").select("module").eq("company_id", me.company_id ?? "").eq("department", me.department ?? ""),
     supabase.rpc("my_workspace").maybeSingle<{ status: string; trial_ends: string | null }>(),
@@ -108,7 +108,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       : []),
   ];
 
-  const css = brandStyle(company?.brand_color ?? "");
+  const css = brandStyle(company?.brand_color ?? "", company?.brand_colors as { accent?: string; dark?: string } | null);
 
   return (
     <>
