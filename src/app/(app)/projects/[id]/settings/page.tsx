@@ -2,11 +2,11 @@ import Link from "next/link";
 import { projectBase } from "@/lib/slug";
 import { ActionForm } from "@/components/ActionForm";
 import { SiteMap } from "@/components/SiteMap";
-import { getProjects } from "@/lib/data";
+import { getMe, getProjects } from "@/lib/data";
 import { money } from "@/lib/format";
 import { PROJECT_TYPES } from "@/lib/options";
 import { createClient } from "@/lib/supabase/server";
-import { copyStructure, savePhase, saveSettings } from "../actions";
+import { copyStructure, deleteProject, savePhase, saveSettings } from "../actions";
 import { Select } from "@/components/Select";
 
 type Check = { step: string; done: boolean; detail: string };
@@ -27,6 +27,8 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
     supabase.rpc("setup_checklist", { p_project: id }),
     getProjects(),
   ]);
+  const me = await getMe();
+  const isAdmin = !!(me?.is_admin || me?.is_platform_admin);
   if (!p) return null;
   const others = projects.filter((x) => x.id !== id);
 
@@ -119,6 +121,19 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
               {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
             </Select>
             <button className="we-btn we-btn--secondary">Copy structure</button>
+          </ActionForm>
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="we-card we-stack" style={{ borderColor: "var(--status-overdue)" }}>
+          <h2 style={{ margin: 0 }}>Delete this project</h2>
+          <p className="we-help" style={{ margin: 0 }}>
+            Deletes {p.name} with all its phases, buildings, units, budget, schedule, contracts, documents and history. This cannot be undone.
+          </p>
+          <ActionForm action={deleteProject.bind(null, id)} className="we-row">
+            <input name="confirm" className="we-input" placeholder={`Type ${p.name} to confirm`} aria-label="Type the project name to confirm" autoComplete="off" required style={{ maxWidth: 320 }} />
+            <button className="we-btn we-btn--danger">Delete project</button>
           </ActionForm>
         </section>
       )}

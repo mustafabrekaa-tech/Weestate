@@ -525,3 +525,23 @@ export async function savePlanGeo(id: string, g: { lng: number; lat: number; mpp
   revalidatePath("/");
   return { ok: "Plan position saved." };
 }
+
+// Deletes a project and everything in it (every project table cascades). Admins only, and only after
+// they type the project's name, because nothing can bring it back.
+export async function deleteProject(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const { getMe } = await import("@/lib/data");
+  const me = await getMe();
+  if (!me?.is_admin && !me?.is_platform_admin) return { error: "Only an admin can delete a project." };
+  const supabase = await createClient();
+  const { data: p } = await supabase.from("projects").select("name").eq("id", id).maybeSingle();
+  if (!p) return { error: "This project no longer exists." };
+  if (str(form.get("confirm")).toLowerCase() !== String(p.name).trim().toLowerCase())
+    return { error: `Type the project's name exactly (${p.name}) to delete it.` };
+  const { data, error } = await supabase.from("projects").delete().eq("id", id).select("id");
+  if (error) return { error: denied(error, "PM or cost control") };
+  if (!data?.length) return { error: "Only an admin who is also in PM or cost control can delete a project." };
+  revalidatePath("/", "layout");
+  const { redirect } = await import("next/navigation");
+  redirect("/?deleted=1");
+  return null;
+}
