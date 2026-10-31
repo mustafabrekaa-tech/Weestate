@@ -4,6 +4,7 @@ import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
 import { EarthMap, type EarthProject } from "@/components/EarthMap";
 import { readGeo } from "@/lib/geo";
+import type { ModelPlacement } from "@/lib/site";
 import { projectSlugs } from "@/lib/slug";
 import { getMe, sortQueue, type QueueItem, acts } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
@@ -12,11 +13,20 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const { project } = await searchParams;
   const supabase = await createClient();
   const me = await getMe();
-  const [{ data: projects }, { data: queue }, { data: plans }] = await Promise.all([
+  const [{ data: projects }, { data: queue }, { data: plans }, { data: blds }, { data: mods }] = await Promise.all([
     supabase.from("project_status").select("*").eq("company_id", me?.company_id ?? "").order("name"),
     supabase.from("work_queue").select("*").eq("company_id", me?.company_id ?? ""),
     supabase.from("projects").select("id, plan_image, plan_w, plan_h, plan_geo").eq("company_id", me?.company_id ?? ""),
+    supabase.from("buildings").select("project_id, footprint, floors, floor_height_m, base_m").not("footprint", "is", null).limit(5000),
+    supabase.from("project_models").select("id, project_id, url, placement").not("placement", "is", null),
   ]);
+  type Bld = { project_id: string; footprint: [number, number][]; floors: number | null; floor_height_m: number | null; base_m: number | null };
+  type Mod = { id: string; project_id: string; url: string; placement: ModelPlacement };
+  const blocksOf = (id: string) => ((blds ?? []) as Bld[]).filter((b) => b.project_id === id).map((b) => {
+    const base = Number(b.base_m ?? 0);
+    return { ring: b.footprint, base, top: base + Math.max(1, b.floors ?? 1) * Number(b.floor_height_m || 3.2) };
+  });
+  const modelsOf = (id: string) => ((mods ?? []) as Mod[]).filter((m) => m.project_id === id).map((m) => ({ id: m.id, url: m.url, placement: m.placement }));
   const list = (projects ?? []) as ProjectStatus[];
   const items = sortQueue((queue ?? []) as QueueItem[]);
   const late = items.filter((q) => q.overdue);
@@ -31,6 +41,8 @@ export default async function Overview({ searchParams }: { searchParams: Promise
         id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, href: `${at(p.id)}/console?view=earth`,
         plan: x?.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
         geo: readGeo(x?.plan_geo),
+        blocks: blocksOf(p.id),
+        models: modelsOf(p.id),
       };
     });
   const canSetup = acts(me, ["pm", "cost_control"]);

@@ -7,11 +7,15 @@ import type { ActionResult } from "@/lib/data";
 import { corners, defaultGeo, type PlanGeo, toLngLat } from "@/lib/geo";
 import { STYLE } from "./SiteMap";
 import type { CUnit } from "./UnitConsole";
+import { addModelLayer, type MapModel } from "./MapModels";
 import { Select } from "@/components/Select";
 
 export type EarthProject = {
   id: string; name: string; lng: number; lat: number; href: string; sub?: string;
   plan: { image: string; w: number; h: number } | null; geo: PlanGeo | null;
+  // Buildings drawn on the 3D site map, and 3D models placed there.
+  blocks?: { ring: [number, number][]; base: number; top: number }[];
+  models?: MapModel[];
 };
 
 const FLOOR_M = 3.3;
@@ -114,6 +118,20 @@ export function EarthMap({
           el.onclick = () => flyTo(p);
           new ml.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(m);
         }
+        // Buildings outlined on the 3D site map stand up here too, with any placed 3D models.
+        const blocks = projects.flatMap((p) => (p.blocks ?? []).filter((b) => b.ring.length > 2).map((b) => {
+          const ring = [...b.ring];
+          const [f, l] = [ring[0]!, ring[ring.length - 1]!];
+          if (f[0] !== l[0] || f[1] !== l[1]) ring.push(f);
+          return { type: "Feature" as const, properties: { b: b.base, t: b.top }, geometry: { type: "Polygon" as const, coordinates: [ring] } };
+        }));
+        if (blocks.length) {
+          m.addSource("blocks", { type: "geojson", data: { type: "FeatureCollection", features: blocks } });
+          m.addLayer({ id: "blocks-3d", type: "fill-extrusion", source: "blocks",
+            paint: { "fill-extrusion-color": "#e6dccb", "fill-extrusion-base": ["get", "b"], "fill-extrusion-height": ["get", "t"], "fill-extrusion-opacity": 0.92 } });
+        }
+        const models = projects.flatMap((p) => p.models ?? []);
+        if (models.length) addModelLayer(m, models).catch(() => {});
         m.addSource("units", { type: "geojson", data: unitsRef.current ?? { type: "FeatureCollection", features: [] } });
         m.addLayer({ id: "units-fill", type: "fill", source: "units",
           paint: { "fill-color": ["get", "color"], "fill-opacity": ["case", ["==", ["get", "on"], 1], 0.85, 0.25] } });
