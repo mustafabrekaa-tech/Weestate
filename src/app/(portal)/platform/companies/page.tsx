@@ -5,6 +5,7 @@ import { getBrand } from "@/lib/brand";
 import { date } from "@/lib/format";
 import { DOMAIN_STATE, STATUS, type Workspace } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Companies" };
 
@@ -27,10 +28,10 @@ export default async function Companies({ searchParams }: { searchParams: Promis
       </PortalHead>
       <form className="we-row we-filterbar" action="/platform/companies">
         <input name="q" defaultValue={q} className="we-input we-input--sm" placeholder="Search name, address or contact" aria-label="Search" style={{ maxWidth: 300 }} />
-        <select name="status" defaultValue={status ?? ""} className="we-input we-select we-input--sm" aria-label="Status">
+        <Select name="status" defaultValue={status ?? ""} className="we-input we-select we-input--sm" aria-label="Status">
           <option value="">Any status</option>
           {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-        </select>
+        </Select>
         <button className="we-btn we-btn--secondary we-btn--sm">Filter</button>
         <span className="we-help">{rows.length} of {all.length}</span>
       </form>

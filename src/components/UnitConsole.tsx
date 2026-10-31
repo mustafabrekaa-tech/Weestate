@@ -10,6 +10,7 @@ import { ActionForm } from "./ActionForm";
 import type { EarthProject } from "./EarthMap";
 import type { PlanGeo } from "@/lib/geo";
 import { SiteTiles, type TileLayout } from "./SiteTiles";
+import { MultiSelect } from "./Select";
 import { TileMap } from "./TileMap";
 
 const EarthMap = dynamic(() => import("./EarthMap").then((m) => m.EarthMap), {
@@ -306,27 +307,21 @@ export function UnitConsole({
         <div className="we-uc__toolbar">
           <label className="we-uc__sel">
             <span>Phase</span>
-            <select value={[...fPhase][0] ?? ""} onChange={(e) => { setFPhase(new Set(e.target.value ? [e.target.value] : [])); setFZone(new Set()); }}>
-              <option value="">All phases</option>
-              {phases.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
-            </select>
+            <MultiSelect value={[...fPhase]} onChange={(v) => { setFPhase(new Set(v)); setFZone(new Set()); }} placeholder="All phases" allLabel="All phases"
+              options={phases.map((p) => ({ value: p.id, label: p.label }))} />
           </label>
           {zonesShown.length > 1 && (
             <label className="we-uc__sel">
               <span>Cluster</span>
-              <select value={[...fZone][0] ?? ""} onChange={(e) => setFZone(new Set(e.target.value ? [e.target.value] : []))}>
-                <option value="">All clusters</option>
-                {zonesShown.map((z) => <option key={z.id} value={z.id}>{z.label}</option>)}
-              </select>
+              <MultiSelect value={[...fZone]} onChange={(v) => setFZone(new Set(v))} placeholder="All clusters" allLabel="All clusters"
+                options={zonesShown.map((z) => ({ value: z.id, label: z.label }))} />
             </label>
           )}
           {types.length > 1 && (
             <label className="we-uc__sel">
               <span>Type</span>
-              <select value={[...fType][0] ?? ""} onChange={(e) => setFType(new Set(e.target.value ? [e.target.value] : []))}>
-                <option value="">All types</option>
-                {types.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <MultiSelect value={[...fType]} onChange={(v) => setFType(new Set(v))} placeholder="All types" allLabel="All types"
+                options={types.map((t) => ({ value: t, label: t }))} />
             </label>
           )}
           {(fPhase.size + fZone.size + fType.size + fBucket.size > 0 || prioOnly || q) && (

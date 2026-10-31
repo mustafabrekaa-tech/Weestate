@@ -7,6 +7,7 @@ import { date, money, pct } from "@/lib/format";
 import { getScope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addContract, recordPayment } from "../actions";
+import { Select } from "@/components/Select";
 
 type Balance = {
   contract_id: string; code: string; contractor: string; value_egp: number; variations_egp: number; revised_value_egp: number;
@@ -138,9 +139,9 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
             <ActionForm action={recordPayment.bind(null, id)} className="we-stack" resetOnOk>
               <div className="we-field">
                 <label htmlFor="certificate_id">Certificate</label>
-                <select id="certificate_id" name="certificate_id" className="we-input we-select" required>
+                <Select id="certificate_id" name="certificate_id" className="we-input we-select" required>
                   {toPay.map((c) => <option key={c.id} value={c.id}>{docRef("PC", c.number)} · {(c.contracts as unknown as { contractor: string } | null)?.contractor} · {money(c.gross_egp)}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-form-grid">
                 <div className="we-field"><label htmlFor="pamount">Amount (EGP)</label><input id="pamount" name="amount_egp" className="we-input we-mono" inputMode="decimal" required /></div>
@@ -164,33 +165,33 @@ export default async function ContractsPage({ params }: { params: Promise<{ id: 
               <div className="we-field"><label htmlFor="advance_pct">Advance recovery %</label><input id="advance_pct" name="advance_pct" className="we-input we-mono" defaultValue="0" /></div>
               <div className="we-field">
                 <label htmlFor="kind">Type</label>
-                <select id="kind" name="kind" className="we-input we-select">
+                <Select id="kind" name="kind" className="we-input we-select">
                   <option value="main">Main contract</option><option value="subcontract">Subcontract</option><option value="supply">Supply</option>
                   <option value="consultancy">Consultancy</option><option value="facility">Facility management</option><option value="other">Other</option>
-                </select>
+                </Select>
               </div>
               <div className="we-field">
                 <label htmlFor="ccost">Cost code</label>
-                <select id="ccost" name="cost_code" className="we-input we-select">
+                <Select id="ccost" name="cost_code" className="we-input we-select">
                   <option value="">None</option>
                   {(codes ?? []).map((c) => <option key={c.code} value={c.code}>{c.code} {c.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field">
                 <label htmlFor="cphase">Phase</label>
-                <select id="cphase" name="phase" className="we-input we-select">
+                <Select id="cphase" name="phase" className="we-input we-select">
                   <option value="">Whole project</option>
                   {(phases ?? []).map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field"><label htmlFor="cstart">Start</label><input id="cstart" name="start_date" type="date" className="we-input" /></div>
               <div className="we-field"><label htmlFor="cfinish">Finish</label><input id="cfinish" name="finish_date" type="date" className="we-input" /></div>
               <div className="we-field"><label htmlFor="csigned">Signed on</label><input id="csigned" name="signed_on" type="date" className="we-input" /></div>
               <div className="we-field">
                 <label htmlFor="cstatus">Status</label>
-                <select id="cstatus" name="status" className="we-input we-select" defaultValue="active">
+                <Select id="cstatus" name="status" className="we-input we-select" defaultValue="active">
                   {["draft", "active", "completed", "closed", "terminated"].map((v) => <option key={v} value={v}>{v[0]!.toUpperCase() + v.slice(1)}</option>)}
-                </select>
+                </Select>
               </div>
               <span className="we-section-title">Terms</span>
               <div className="we-field"><label htmlFor="cbond">Performance bond %</label><input id="cbond" name="performance_bond_pct" className="we-input we-mono" inputMode="decimal" /></div>

@@ -5,6 +5,7 @@ import { createWorkspace } from "@/app/(app)/admin/actions";
 import { getBrand } from "@/lib/brand";
 import { money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Add a company" };
 
@@ -33,9 +34,9 @@ export default async function NewCompany() {
           <div className="we-form-grid">
             <div className="we-field">
               <label htmlFor="plan">Plan</label>
-              <select id="plan" name="plan" className="we-input we-select" defaultValue="standard">
+              <Select id="plan" name="plan" className="we-input we-select" defaultValue="standard">
                 {(plans ?? []).map((p) => <option key={p.code} value={p.code}>{p.name} · EGP {money(p.price_egp)} a month</option>)}
-              </select>
+              </Select>
             </div>
             <div className="we-field"><label htmlFor="trial_days">Free trial (days)</label><input id="trial_days" name="trial_days" className="we-input we-mono" inputMode="numeric" placeholder="0 = starts paid" /></div>
             <div className="we-field"><label htmlFor="max_users">People limit</label><input id="max_users" name="max_users" className="we-input we-mono" inputMode="numeric" placeholder="From the plan" /></div>

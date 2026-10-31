@@ -7,6 +7,7 @@ import { date } from "@/lib/format";
 import { DOMAIN_STATE, STATUS, type Workspace } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
 import { checkAddress, saveAddress, saveShortName, saveWorkspace, staffResetMfa, staffResetPassword } from "../../actions";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Company" };
 
@@ -48,15 +49,15 @@ export default async function CompanyPage({ params }: { params: Promise<{ cid: s
             <div className="we-form-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
               <div className="we-field">
                 <label htmlFor="status">Status</label>
-                <select id="status" name="status" defaultValue={w.status} className="we-input we-select">
+                <Select id="status" name="status" defaultValue={w.status} className="we-input we-select">
                   {Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field">
                 <label htmlFor="plan">Plan</label>
-                <select id="plan" name="plan" defaultValue={w.plan} className="we-input we-select">
+                <Select id="plan" name="plan" defaultValue={w.plan} className="we-input we-select">
                   {(plans ?? []).map((pl) => <option key={pl.code} value={pl.code}>{pl.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field"><label htmlFor="max_users">People limit</label><input id="max_users" name="max_users" defaultValue={w.max_users ?? ""} className="we-input we-mono" inputMode="numeric" placeholder="No limit" /></div>
               <div className="we-field"><label htmlFor="max_projects">Project limit</label><input id="max_projects" name="max_projects" defaultValue={w.max_projects ?? ""} className="we-input we-mono" inputMode="numeric" placeholder="No limit" /></div>

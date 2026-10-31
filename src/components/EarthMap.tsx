@@ -7,6 +7,7 @@ import type { ActionResult } from "@/lib/data";
 import { corners, defaultGeo, type PlanGeo, toLngLat } from "@/lib/geo";
 import { STYLE } from "./SiteMap";
 import type { CUnit } from "./UnitConsole";
+import { Select } from "@/components/Select";
 
 export type EarthProject = {
   id: string; name: string; lng: number; lat: number; href: string; sub?: string;
@@ -252,10 +253,10 @@ export function EarthMap({
           <button type="button" onClick={stopTour}>Stop</button>
         </div>
         {projects.length > 1 && (
-          <select className="we-earth__go" value="" onChange={(e) => { const p = projects.find((x) => x.id === e.target.value); if (p) flyTo(p); }} aria-label="Fly to a project">
+          <Select className="we-earth__go" value="" onChange={(e) => { const p = projects.find((x) => x.id === e.target.value); if (p) flyTo(p); }} aria-label="Fly to a project">
             <option value="">Fly to project…</option>
             {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          </Select>
         )}
         {canAlign && focus?.plan && <button type="button" className={`we-btn we-btn--sm ${align ? "we-btn--primary" : "we-btn--secondary"}`} onClick={() => setAlign(!align)}>Line up the plan</button>}
       </div>

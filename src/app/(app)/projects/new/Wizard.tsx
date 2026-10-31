@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { SiteMap } from "@/components/SiteMap";
 import type { ActionResult } from "@/lib/data";
 import { PROJECT_TYPES } from "@/lib/options";
+import { Select } from "@/components/Select";
 
 type Template = { id: string; name: string; project_type: string; payload: { phases?: string[]; unit_types?: { name: string }[] } };
 
@@ -58,9 +59,9 @@ export function Wizard({ templates, action }: { templates: Template[]; action: (
           <div className="we-field"><label htmlFor="location">Area</label><input id="location" name="location" className="we-input" placeholder="New Cairo" /></div>
           <div className="we-field">
             <label htmlFor="project_type">Type</label>
-            <select id="project_type" name="project_type" className="we-input we-select" value={type} onChange={(e) => setType(e.target.value)}>
+            <Select id="project_type" name="project_type" className="we-input we-select" value={type} onChange={(e) => setType(e.target.value)}>
               {PROJECT_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-            </select>
+            </Select>
           </div>
           <div className="we-field"><label htmlFor="budget_egp">Headline budget (EGP)</label><input id="budget_egp" name="budget_egp" className="we-input we-mono" inputMode="decimal" /></div>
           <div className="we-field"><label htmlFor="start_date">Start</label><input id="start_date" name="start_date" type="date" className="we-input" /></div>

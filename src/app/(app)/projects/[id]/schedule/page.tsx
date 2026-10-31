@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CATEGORIES, STANDARD } from "@/lib/scheduleTemplate";
 import { addActivityProgress, addPhaseProgress } from "../actions";
 import { addStandardSchedule, deleteActivity, recalculate, saveActivity } from "./actions";
+import { Select } from "@/components/Select";
 
 type Activity = {
   id: string; code: string; name: string; wbs: string; start_date: string | null; finish_date: string | null; is_milestone: boolean; weight: number;
@@ -156,11 +157,11 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
               <div className="we-field" style={{ gridColumn: "span 2" }}><label htmlFor="name">Name</label><input id="name" name="name" className="we-input" placeholder="Concrete structure B01" required /></div>
               <div className="we-field">
                 <label htmlFor="kind">Type</label>
-                <select id="kind" name="kind" className="we-input we-select"><option value="task">Activity</option><option value="start">Start milestone</option><option value="finish">Finish milestone</option></select>
+                <Select id="kind" name="kind" className="we-input we-select"><option value="task">Activity</option><option value="start">Start milestone</option><option value="finish">Finish milestone</option></Select>
               </div>
               <div className="we-field">
                 <label htmlFor="category">Category</label>
-                <select id="category" name="category" className="we-input we-select">{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
+                <Select id="category" name="category" className="we-input we-select">{CATEGORIES.map((c) => <option key={c}>{c}</option>)}</Select>
               </div>
               <div className="we-field"><label htmlFor="duration">Duration (days)</label><input id="duration" name="duration" className="we-input we-mono" inputMode="numeric" placeholder="30" /></div>
               <div className="we-field" style={{ gridColumn: "span 2" }}>
@@ -169,7 +170,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
               </div>
               <div className="we-field">
                 <label htmlFor="sphase">Phase</label>
-                <select id="sphase" name="phase_id" className="we-input we-select"><option value="">Whole project</option>{(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                <Select id="sphase" name="phase_id" className="we-input we-select"><option value="">Whole project</option>{(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
               </div>
               <div className="we-field"><label htmlFor="swbs">WBS</label><input id="swbs" name="wbs" className="we-input" placeholder="PH01.Execution" /></div>
               <div className="we-field"><label htmlFor="sstart">Start (optional)</label><input id="sstart" name="start_date" type="date" className="we-input" /></div>
@@ -186,7 +187,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <ActionForm action={addStandardSchedule.bind(null, id)} className="we-form-grid">
               <div className="we-field">
                 <label htmlFor="tphase">Phase</label>
-                <select id="tphase" name="phase_id" className="we-input we-select"><option value="">Whole project</option>{(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+                <Select id="tphase" name="phase_id" className="we-input we-select"><option value="">Whole project</option>{(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select>
               </div>
               <div className="we-field"><label htmlFor="tstart">Notice to proceed</label><input id="tstart" name="start_date" type="date" className="we-input" defaultValue={today} required /></div>
               <div className="we-field" style={{ alignSelf: "end" }}><button className="we-btn we-btn--secondary">Add standard schedule</button></div>
@@ -203,9 +204,9 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <ActionForm action={addPhaseProgress.bind(null, id)} className="we-form-grid" resetOnOk>
               <div className="we-field">
                 <label htmlFor="phase_id">Phase</label>
-                <select id="phase_id" name="phase_id" className="we-input we-select" required>
+                <Select id="phase_id" name="phase_id" className="we-input we-select" required>
                   {(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field"><label htmlFor="period">Month ending</label><input id="period" name="period" type="date" className="we-input" defaultValue={monthEnd()} required /></div>
               <div className="we-field"><label htmlFor="planned_pct">Planned %</label><input id="planned_pct" name="planned_pct" className="we-input we-mono" inputMode="decimal" required /></div>
@@ -265,9 +266,9 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
             <ActionForm action={addActivityProgress.bind(null, id)} className="we-card we-form-grid" resetOnOk>
               <div className="we-field" style={{ gridColumn: "span 2" }}>
                 <label htmlFor="activity_id">Activity</label>
-                <select id="activity_id" name="activity_id" className="we-input we-select" required>
+                <Select id="activity_id" name="activity_id" className="we-input we-select" required>
                   {activities.map((a) => <option key={a.id} value={a.id}>{a.code} · {a.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field"><label htmlFor="aperiod">As of</label><input id="aperiod" name="period" type="date" className="we-input" defaultValue={today} required /></div>
               <div className="we-field"><label htmlFor="aactual">Complete %</label><input id="aactual" name="actual_pct" className="we-input we-mono" inputMode="decimal" required /></div>

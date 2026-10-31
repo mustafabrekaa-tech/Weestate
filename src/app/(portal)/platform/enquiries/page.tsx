@@ -4,6 +4,7 @@ import { PortalHead } from "@/components/PortalHead";
 import { dateTime } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { updateEnquiry } from "../actions";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Website enquiries" };
 
@@ -50,9 +51,9 @@ export default async function Enquiries({ searchParams }: { searchParams: Promis
                 {e.phone && <a className="we-btn we-btn--secondary we-btn--sm" href={`https://wa.me/${e.phone.replace(/[^\d]/g, "")}`} target="_blank" rel="noreferrer">WhatsApp</a>}
               </div>
               <ActionForm action={updateEnquiry.bind(null, e.id)} className="we-row" >
-                <select name="status" defaultValue={e.status} className="we-input we-select we-input--sm" aria-label="Stage">
+                <Select name="status" defaultValue={e.status} className="we-input we-select we-input--sm" aria-label="Stage">
                   {Object.entries(STAGES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                </select>
+                </Select>
                 <input name="staff_notes" defaultValue={e.staff_notes} className="we-input we-input--sm" placeholder="Notes" aria-label="Notes" style={{ flex: 1, minWidth: 220 }} />
                 <button className="we-btn we-btn--primary we-btn--sm">Save</button>
               </ActionForm>

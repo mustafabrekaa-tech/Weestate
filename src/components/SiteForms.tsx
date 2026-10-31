@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { ActionResult } from "@/lib/data";
+import { Select } from "@/components/Select";
 
 export function EnquiryForm({ action }: { action: (p: ActionResult, f: FormData) => Promise<ActionResult> }) {
   const [state, formAction, pending] = useActionState(action, null);
@@ -22,16 +23,16 @@ export function EnquiryForm({ action }: { action: (p: ActionResult, f: FormData)
         <label>Work email<input name="email" type="email" required autoComplete="email" /></label>
         <label>Phone or WhatsApp<input name="phone" type="tel" autoComplete="tel" /></label>
         <label>Your role
-          <select name="role" defaultValue="">
+          <Select name="role" defaultValue="">
             <option value="">Choose…</option>
             <option>Owner or CEO</option><option>Project director or PM</option><option>Cost control</option>
             <option>Finance</option><option>Sales</option><option>Technical office</option><option>IT</option><option>Other</option>
-          </select>
+          </Select>
         </label>
         <label>Projects you run
-          <select name="projects" defaultValue="">
+          <Select name="projects" defaultValue="">
             <option value="">Choose…</option><option>1</option><option>2 to 5</option><option>6 to 15</option><option>More than 15</option>
-          </select>
+          </Select>
         </label>
       </div>
       <label>What would you like to see?<textarea name="message" rows={4} placeholder="For example: a demo for our sales and cost control teams" /></label>

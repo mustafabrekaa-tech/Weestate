@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { Select } from "@/components/Select";
 
 type Opt = { id: string; code: string; name: string; phase_id?: string | null; zone_id?: string | null };
 
@@ -32,30 +33,30 @@ export function ScopeBar({
   return (
     <div className={`we-scope${any ? " is-on" : ""}`} aria-busy={pending}>
       <span className="we-scope__title">Showing</span>
-      <select className="we-input we-select we-input--sm" value={value.phase} aria-label="Phase"
+      <Select className="we-input we-select we-input--sm" value={value.phase} aria-label="Phase"
         onChange={(e) => set({ phase: e.target.value, zone: "", building: "" })}>
         <option value="">All phases</option>
         {phases.map((p) => <option key={p.id} value={p.id}>{name(p)}</option>)}
-      </select>
+      </Select>
       {zones.length > 0 && (
-        <select className="we-input we-select we-input--sm" value={value.zone} aria-label="Zone"
+        <Select className="we-input we-select we-input--sm" value={value.zone} aria-label="Zone"
           onChange={(e) => {
             const z = zones.find((x) => x.id === e.target.value);
             set({ phase: z?.phase_id ?? value.phase, zone: e.target.value, building: "" });
           }}>
           <option value="">All zones</option>
           {zoneList.map((z) => <option key={z.id} value={z.id}>{name(z)}</option>)}
-        </select>
+        </Select>
       )}
       {buildings.length > 0 && (
-        <select className="we-input we-select we-input--sm" value={value.building} aria-label="Building"
+        <Select className="we-input we-select we-input--sm" value={value.building} aria-label="Building"
           onChange={(e) => {
             const b = buildings.find((x) => x.id === e.target.value);
             set({ phase: b?.phase_id ?? value.phase, zone: b?.zone_id ?? value.zone, building: e.target.value });
           }}>
           <option value="">All buildings</option>
           {buildingList.map((b) => <option key={b.id} value={b.id}>{name(b)}</option>)}
-        </select>
+        </Select>
       )}
       <span className="we-help">{pending ? "Updating…" : any ? `${counts.label} · ${counts.units.toLocaleString("en-US")} units` : `Whole project · ${counts.units.toLocaleString("en-US")} units`}</span>
       {any && <button type="button" className="we-link" onClick={() => set({ phase: "", zone: "", building: "" })}>Show whole project</button>}

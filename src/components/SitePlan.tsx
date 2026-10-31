@@ -8,6 +8,7 @@ import type { ActionResult } from "@/lib/data";
 import { autoLayout } from "@/lib/layout";
 import { UNIT_STATUS, type SiteBuilding, type SiteModel, type SitePhase, type SiteUnit, type SiteZone } from "@/lib/site";
 import { ModelViewer } from "./ModelViewer";
+import { Select } from "@/components/Select";
 
 const NO_UNITS = "#c9c3b8";
 
@@ -329,20 +330,20 @@ export function SitePlan({
         </div>
         {view === "map" && (
           <>
-            <select className="we-input we-select we-input--sm" value={phase} onChange={(e) => { setPhase(e.target.value); setZone(""); setBuilding(""); setPick(null); }} aria-label="Phase">
+            <Select className="we-input we-select we-input--sm" value={phase} onChange={(e) => { setPhase(e.target.value); setZone(""); setBuilding(""); setPick(null); }} aria-label="Phase">
               <option value="">All phases</option>
               {phases.map((p) => <option key={p.id} value={p.id}>{p.name || p.code}</option>)}
-            </select>
+            </Select>
             {zones.length > 0 && (
-              <select className="we-input we-select we-input--sm" value={zone} onChange={(e) => { setZone(e.target.value); setBuilding(""); setPick(null); }} aria-label="Zone">
+              <Select className="we-input we-select we-input--sm" value={zone} onChange={(e) => { setZone(e.target.value); setBuilding(""); setPick(null); }} aria-label="Zone">
                 <option value="">All zones</option>
                 {shownZones.map((z) => <option key={z.id} value={z.id}>{z.name || z.code}</option>)}
-              </select>
+              </Select>
             )}
-            <select className="we-input we-select we-input--sm" value={building} onChange={(e) => { setBuilding(e.target.value); setPick(null); }} aria-label="Building">
+            <Select className="we-input we-select we-input--sm" value={building} onChange={(e) => { setBuilding(e.target.value); setPick(null); }} aria-label="Building">
               <option value="">All buildings</option>
               {shownBuildings.map((b) => <option key={b.id} value={b.id}>{b.code}{b.name && b.name !== b.code ? ` · ${b.name}` : ""}{b.virtual ? " (suggested)" : ""}</option>)}
-            </select>
+            </Select>
           </>
         )}
         <span className="we-legend">
@@ -407,10 +408,10 @@ export function SitePlan({
               {canSell && (
                 <div className="we-field">
                   <label htmlFor="ustatus">Status</label>
-                  <select id="ustatus" className="we-input we-select" value={selectedUnit.status} disabled={pending}
+                  <Select id="ustatus" className="we-input we-select" value={selectedUnit.status} disabled={pending}
                     onChange={(e) => run(() => changeStatus(selectedUnit.id, e.target.value))}>
                     {Object.entries(UNIT_STATUS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                  </select>
+                  </Select>
                 </div>
               )}
               <div className="we-actionsbar">
@@ -493,7 +494,7 @@ function DrawPicker({ phases, buildings, onStart }: { phases: SitePhase[]; build
   const [target, setTarget] = useState("");
   return (
     <div className="we-row" style={{ gap: 6 }}>
-      <select className="we-input we-select we-input--sm" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="What to draw" style={{ flex: 1 }}>
+      <Select className="we-input we-select we-input--sm" value={target} onChange={(e) => setTarget(e.target.value)} aria-label="What to draw" style={{ flex: 1 }}>
         <option value="">Choose a phase or building…</option>
         <optgroup label="Phases">
           {phases.map((p) => <option key={p.id} value={`phase:${p.id}`}>{p.name || p.code}{p.boundary ? " ✓" : ""}</option>)}
@@ -501,7 +502,7 @@ function DrawPicker({ phases, buildings, onStart }: { phases: SitePhase[]; build
         <optgroup label="Buildings">
           {buildings.map((b) => <option key={b.id} value={`building:${b.id}`}>{b.code}{b.footprint ? " ✓" : ""}</option>)}
         </optgroup>
-      </select>
+      </Select>
       <button
         type="button"
         className="we-btn we-btn--primary we-btn--sm"

@@ -6,6 +6,7 @@ import { getMe, getSteps, type Department } from "@/lib/data";
 import { DOCS, docByType } from "@/lib/docs";
 import { createClient } from "@/lib/supabase/server";
 import { customizeSteps, removeLastStep, saveStep, useDefaultSteps } from "../actions";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Workflow steps" };
 
@@ -46,9 +47,9 @@ export default async function WorkflowsPage({ searchParams }: { searchParams: Pr
                       <ActionForm action={saveStep.bind(null, c, d.type)} className="we-row" resetOnOk={!s}>
                         <input type="hidden" name="id" value={(s as { id?: string } | null)?.id ?? ""} />
                         <input name="name" className="we-input" defaultValue={s?.name} placeholder="Step name" style={{ maxWidth: 200 }} aria-label="Step name" />
-                        <select name="department" className="we-input we-select" defaultValue={s?.department} style={{ maxWidth: 200 }} aria-label="Department">
+                        <Select name="department" className="we-input we-select" defaultValue={s?.department} style={{ maxWidth: 200 }} aria-label="Department">
                           {((depts ?? []) as Department[]).map((x) => <option key={x.code} value={x.code}>{x.name}</option>)}
-                        </select>
+                        </Select>
                         <input name="action" className="we-input" defaultValue={s?.action} placeholder="Button, e.g. Approve" style={{ maxWidth: 200 }} aria-label="Button label" />
                         <input name="due_days" className="we-input we-mono" defaultValue={s?.due_days ?? 2} style={{ maxWidth: 70 }} aria-label="Days allowed" />
                         <span className="we-help">days</span>

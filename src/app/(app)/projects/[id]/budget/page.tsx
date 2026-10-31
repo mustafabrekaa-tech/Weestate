@@ -6,6 +6,7 @@ import { getMe, acts } from "@/lib/data";
 import { money } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { approveBudget, saveBudgetLine } from "../actions";
+import { Select } from "@/components/Select";
 
 type Line = {
   cost_code_id: string; code: string; name: string; parent_code: string | null;
@@ -116,16 +117,16 @@ export default async function BudgetPage({ params }: { params: Promise<{ id: str
           <ActionForm action={saveBudgetLine.bind(null, id)} className="we-form-grid" resetOnOk>
             <div className="we-field">
               <label htmlFor="cost_code">Cost code</label>
-              <select id="cost_code" name="cost_code" className="we-input we-select" required>
+              <Select id="cost_code" name="cost_code" className="we-input we-select" required>
                 {allCodes.map((c) => <option key={c.code} value={c.code}>{c.parent_code ? "  " : ""}{c.code} {c.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="we-field">
               <label htmlFor="phase">Phase <span className="we-help">· optional</span></label>
-              <select id="phase" name="phase" className="we-input we-select">
+              <Select id="phase" name="phase" className="we-input we-select">
                 <option value="">Whole project</option>
                 {(phases ?? []).map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="we-field">
               <label htmlFor="amount_egp">Amount (EGP)</label>

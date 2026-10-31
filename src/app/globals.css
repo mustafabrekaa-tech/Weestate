@@ -1027,7 +1027,7 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
 .we-uc__filters { gap: 8px; padding: 10px 12px; }
 .we-uc__toolbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 .we-uc__sel { display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 4px 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-md); background: var(--surface-raised); }
-.we-uc__sel span { font: 600 11px/14px var(--font-sans); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-muted); }
+.we-uc__sel > span:not([hidden]) { font: 600 11px/14px var(--font-sans); letter-spacing: .05em; text-transform: uppercase; color: var(--ink-muted); }
 .we-uc__sel select { border: 0; background: transparent; font: 500 14px/20px var(--font-sans); color: var(--ink); padding: 6px 4px; max-width: 260px; cursor: pointer; }
 .we-uc__sel select:focus { outline: none; }
 .we-uc__sel:focus-within { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
@@ -1158,3 +1158,38 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
 @keyframes we-drawer-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 .we-uc__drawerx { position: absolute; top: 6px; right: 8px; z-index: 1; width: 30px; height: 30px; border: 0; border-radius: 6px; background: rgba(255,255,255,.12); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; }
 .we-uc__drawer .we-uc__selhead { padding-right: 44px; }
+
+/* Dropdowns (components/Select.tsx): our own list instead of the browser's menu */
+.we-sel__native { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0 0 0 0) !important; border: 0 !important; opacity: 0; pointer-events: none; }
+.we-sel { display: inline-flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; min-width: 0; max-width: 100%; }
+.we-sel.we-input { display: flex; width: 100%; }
+.we-sel--plain { font: 500 13.5px/20px var(--font-sans); color: var(--ink); background: var(--surface-raised); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 6px 10px; }
+.we-sel:hover:not(:disabled) { border-color: var(--steel); }
+.we-sel.is-open { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(197, 154, 72, .18); }
+.we-sel:disabled { opacity: .55; cursor: default; }
+.we-sel__val { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.we-sel__count { flex: none; font: 600 11px/18px var(--font-mono); background: var(--steel); color: #fff; border-radius: 9px; min-width: 18px; padding: 0 5px; text-align: center; }
+.we-sel__chev { flex: none; width: 8px; height: 8px; border-right: 1.6px solid var(--ink-muted); border-bottom: 1.6px solid var(--ink-muted); transform: translateY(-2px) rotate(45deg); transition: transform .15s; }
+.we-sel.is-open .we-sel__chev { transform: translateY(2px) rotate(-135deg); }
+.we-sel__pop { z-index: 1000; display: flex; flex-direction: column; background: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px rgba(15, 23, 42, .16), 0 2px 6px rgba(15, 23, 42, .06); overflow: hidden; animation: we-sel-in .12s ease-out; font-family: var(--font-sans); }
+@keyframes we-sel-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+.we-sel__search { margin: 8px 8px 4px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 6px; font: 400 13.5px var(--font-sans); outline: none; }
+.we-sel__search:focus { border-color: var(--gold); }
+.we-sel__pop ul { list-style: none; margin: 0; padding: 4px; overflow: auto; flex: 1 1 auto; outline: none; }
+.we-sel__opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 5px; font-size: 14px; line-height: 20px; color: var(--ink); cursor: pointer; }
+.we-sel__opt.is-hi { background: var(--surface-sunken, #f3f1ec); }
+.we-sel__opt.is-on { font-weight: 600; }
+.we-sel__opt.is-off { opacity: .45; cursor: default; }
+.we-sel__opt span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.we-sel__tick { flex: none; width: 12px; height: 7px; border-left: 2px solid transparent; border-bottom: 2px solid transparent; transform: translateY(-2px) rotate(-45deg); }
+.we-sel__opt.is-on .we-sel__tick { border-color: var(--gold-deep, #9a7428); }
+.we-sel__box { flex: none; width: 16px; height: 16px; border: 1.5px solid var(--line-strong); border-radius: 4px; background: #fff; position: relative; }
+.we-sel__opt.is-on .we-sel__box { background: var(--steel); border-color: var(--steel); }
+.we-sel__opt.is-on .we-sel__box::after { content: ""; position: absolute; left: 4.5px; top: 1.5px; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+.we-sel__group { padding: 8px 10px 4px; font: 600 11px/14px var(--font-sans); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-muted); }
+.we-sel__none { padding: 10px; color: var(--ink-muted); font-size: 13px; }
+.we-sel__foot { display: flex; justify-content: space-between; gap: 8px; padding: 6px 8px; border-top: 1px solid var(--line); background: #fafaf8; }
+.we-sel__foot button { border: 0; background: none; font: 600 12.5px var(--font-sans); color: var(--brand, #8a6a2b); cursor: pointer; padding: 4px 6px; border-radius: 4px; }
+.we-sel__foot button:hover { background: var(--surface-sunken, #f3f1ec); }
+/* in the console filter bar the button sits inside the labelled pill */
+.we-uc__sel .we-sel { border: 0; background: none; padding: 0; box-shadow: none; font: 500 14px/20px var(--font-sans); width: auto; min-width: 110px; }

@@ -406,11 +406,11 @@ export async function saveLayout(id: string, data: unknown): Promise<ActionResul
 // Which units a bulk form means: phase, zone, building, unit type and/or typed codes.
 async function pickUnits(supabase: Awaited<ReturnType<typeof createClient>>, id: string, form: FormData) {
   const codes = str(form.get("codes")).split(/[\s,;]+/).filter(Boolean);
+  // Each field can carry several values (multi-select): units must match one of them.
+  const many = (k: string) => form.getAll(k).map((v) => String(v).trim()).filter(Boolean);
+  const sets = { phase_id: many("phase_id"), zone_id: many("zone_id"), building_id: many("building_id"), unit_type: many("unit_type") };
   let q = supabase.from("units").select("id").eq("project_id", id);
-  if (str(form.get("phase_id"))) q = q.eq("phase_id", str(form.get("phase_id")));
-  if (str(form.get("zone_id"))) q = q.eq("zone_id", str(form.get("zone_id")));
-  if (str(form.get("building_id"))) q = q.eq("building_id", str(form.get("building_id")));
-  if (str(form.get("unit_type"))) q = q.eq("unit_type", str(form.get("unit_type")));
+  for (const [k, v] of Object.entries(sets)) if (v.length) q = q.in(k, v);
   if (codes.length) q = q.in("code", codes);
   const out: string[] = [];
   for (let from = 0; ; from += 1000) {
@@ -418,7 +418,7 @@ async function pickUnits(supabase: Awaited<ReturnType<typeof createClient>>, id:
     out.push(...(data ?? []).map((r) => r.id as string));
     if (!data || data.length < 1000) break;
   }
-  return { ids: out, filtered: codes.length > 0 || ["phase_id", "zone_id", "building_id", "unit_type"].some((k) => str(form.get(k))) };
+  return { ids: out, filtered: codes.length > 0 || Object.values(sets).some((v) => v.length > 0) };
 }
 
 export async function recordConstruction(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {

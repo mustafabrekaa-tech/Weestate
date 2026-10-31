@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ActionResult } from "@/lib/data";
 import { createClient } from "@/lib/supabase/client";
 import { UNIT_STATUS, type SiteModel, type SiteUnit } from "@/lib/site";
+import { Select } from "@/components/Select";
 
 // Shows an uploaded 3D model (glTF / GLB) of the project. Parts named after a
 // unit code (for example "B01-101") are coloured by that unit's status and can
@@ -187,9 +188,9 @@ export function ModelViewer({
     <div className="we-model">
       <div className="we-model__bar">
         {models.length > 1 && (
-          <select className="we-input we-select we-input--sm" value={model?.id} onChange={(e) => setCurrent(e.target.value)} aria-label="Model">
+          <Select className="we-input we-select we-input--sm" value={model?.id} onChange={(e) => setCurrent(e.target.value)} aria-label="Model">
             {models.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
+          </Select>
         )}
         {model && (
           <label className="we-row" style={{ gap: 6, fontSize: 13 }}>

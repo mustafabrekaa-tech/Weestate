@@ -5,6 +5,7 @@ import { acts, getMe } from "@/lib/data";
 import { UNIT_STATUS } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 import { assignUnits, editBuilding, removeBuilding, removeZone, savePhase, saveZone } from "../actions";
+import { Select } from "@/components/Select";
 
 type Phase = { id: string; code: string; name: string };
 type Zone = { id: string; code: string; name: string; phase_id: string | null };
@@ -77,7 +78,7 @@ export default async function Structure({ params }: { params: Promise<{ id: stri
                 <input type="hidden" name="zone_id" value={z.id} />
                 <input name="code" defaultValue={z.code} className="we-input we-input--sm we-mono" style={{ maxWidth: 110 }} aria-label="Code" required />
                 <input name="name" defaultValue={z.name} className="we-input we-input--sm" style={{ maxWidth: 220 }} aria-label="Name" />
-                <select name="phase_id" defaultValue={z.phase_id ?? ""} className="we-input we-select we-input--sm" aria-label="Phase"><option value="">No phase</option>{opts(ph)}</select>
+                <Select name="phase_id" defaultValue={z.phase_id ?? ""} className="we-input we-select we-input--sm" aria-label="Phase"><option value="">No phase</option>{opts(ph)}</Select>
                 <button className="we-btn we-btn--secondary we-btn--sm">Save</button>
               </ActionForm>
               <ActionForm action={removeZone.bind(null, id, z.id)}><button className="we-link we-link--danger">Remove zone</button></ActionForm>
@@ -146,7 +147,7 @@ export default async function Structure({ params }: { params: Promise<{ id: stri
                   <input name="code" className="we-input we-mono" placeholder="Z1" required aria-label="Code" style={{ maxWidth: 110 }} />
                   <input name="name" className="we-input" placeholder="North cluster" aria-label="Name" />
                 </div>
-                <select name="phase_id" className="we-input we-select" aria-label="Phase"><option value="">In which phase?</option>{opts(ph)}</select>
+                <Select name="phase_id" className="we-input we-select" aria-label="Phase"><option value="">In which phase?</option>{opts(ph)}</Select>
                 <div><button className="we-btn we-btn--secondary we-btn--sm">Add zone</button></div>
               </ActionForm>
             </section>
@@ -165,21 +166,21 @@ export default async function Structure({ params }: { params: Promise<{ id: stri
                 <div className="we-field"><label htmlFor="prefix">Code starts with</label><input id="prefix" name="prefix" className="we-input we-mono" placeholder="A03-" /></div>
                 <div className="we-field">
                   <label htmlFor="unit_type">Type</label>
-                  <select id="unit_type" name="unit_type" className="we-input we-select"><option value="">Any</option>{types.map((t) => <option key={t}>{t}</option>)}</select>
+                  <Select id="unit_type" name="unit_type" className="we-input we-select"><option value="">Any</option>{types.map((t) => <option key={t}>{t}</option>)}</Select>
                 </div>
                 <div className="we-field"><label htmlFor="from">From code</label><input id="from" name="from" className="we-input we-mono" placeholder="A03-001" /></div>
                 <div className="we-field"><label htmlFor="to">To code</label><input id="to" name="to" className="we-input we-mono" placeholder="A03-024" /></div>
                 <div className="we-field">
                   <label htmlFor="m-phase">Phase</label>
-                  <select id="m-phase" name="phase_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(ph)}</select>
+                  <Select id="m-phase" name="phase_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(ph)}</Select>
                 </div>
                 <div className="we-field">
                   <label htmlFor="m-zone">Zone</label>
-                  <select id="m-zone" name="zone_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(zs)}</select>
+                  <Select id="m-zone" name="zone_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(zs)}</Select>
                 </div>
                 <div className="we-field">
                   <label htmlFor="m-building">Building</label>
-                  <select id="m-building" name="building_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(bs)}</select>
+                  <Select id="m-building" name="building_id" className="we-input we-select"><option value="">Keep</option><option value="none">None</option>{opts(bs)}</Select>
                 </div>
                 <div className="we-field"><label htmlFor="m-floor">Floor</label><input id="m-floor" name="floor" className="we-input we-mono" inputMode="numeric" placeholder="Keep" /></div>
               </div>
@@ -202,13 +203,13 @@ function BuildingForm({ id, b, phases, zones }: { id: string; b?: Building; phas
         <div className="we-field"><label htmlFor={`bn-${n}`}>Name</label><input id={`bn-${n}`} name="name" defaultValue={b?.name} className="we-input" /></div>
         <div className="we-field">
           <label htmlFor={`bp-${n}`}>Phase</label>
-          <select id={`bp-${n}`} name="phase_id" defaultValue={b?.phase_id ?? ""} className="we-input we-select"><option value="">None</option>
-            {phases.map((p) => <option key={p.id} value={p.id}>{p.name || p.code}</option>)}</select>
+          <Select id={`bp-${n}`} name="phase_id" defaultValue={b?.phase_id ?? ""} className="we-input we-select"><option value="">None</option>
+            {phases.map((p) => <option key={p.id} value={p.id}>{p.name || p.code}</option>)}</Select>
         </div>
         <div className="we-field">
           <label htmlFor={`bz-${n}`}>Zone</label>
-          <select id={`bz-${n}`} name="zone_id" defaultValue={b?.zone_id ?? ""} className="we-input we-select"><option value="">None</option>
-            {zones.map((z) => <option key={z.id} value={z.id}>{z.name || z.code}</option>)}</select>
+          <Select id={`bz-${n}`} name="zone_id" defaultValue={b?.zone_id ?? ""} className="we-input we-select"><option value="">None</option>
+            {zones.map((z) => <option key={z.id} value={z.id}>{z.name || z.code}</option>)}</Select>
         </div>
         <div className="we-field"><label htmlFor={`bf-${n}`}>Floors</label><input id={`bf-${n}`} name="floors" defaultValue={b?.floors} className="we-input we-mono" inputMode="numeric" placeholder="6" /></div>
         <div className="we-field"><label htmlFor={`bh-${n}`}>Floor height (m)</label><input id={`bh-${n}`} name="floor_height_m" defaultValue={b?.floor_height_m} className="we-input we-mono" inputMode="decimal" placeholder="3.2" /></div>

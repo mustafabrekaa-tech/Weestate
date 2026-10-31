@@ -6,6 +6,7 @@ import { date, money } from "@/lib/format";
 import { getScope, scoped } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addUnitType, generateUnits, setUnitStatus } from "../actions";
+import { Select } from "@/components/Select";
 
 const STATUSES: [string, string][] = [
   ["available", "Available"], ["reserved", "Reserved"], ["sold", "Sold"], ["ready", "Ready for handover"],
@@ -81,14 +82,14 @@ export default async function UnitsPage({
       <section className="we-stack">
         <form className="we-row" action={`${base}/units`}>
           <input name="q" defaultValue={q} className="we-input" placeholder="Unit code" style={{ maxWidth: 180 }} aria-label="Unit code" />
-          <select name="phase" defaultValue={phase ?? ""} className="we-input we-select" style={{ maxWidth: 200 }} aria-label="Phase">
+          <Select name="phase" defaultValue={phase ?? ""} className="we-input we-select" style={{ maxWidth: 200 }} aria-label="Phase">
             <option value="">All phases</option>
             {(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select name="status" defaultValue={status ?? ""} className="we-input we-select" style={{ maxWidth: 200 }} aria-label="Status">
+          </Select>
+          <Select name="status" defaultValue={status ?? ""} className="we-input we-select" style={{ maxWidth: 200 }} aria-label="Status">
             <option value="">All statuses</option>
             {STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-          </select>
+          </Select>
           <button className="we-btn we-btn--secondary we-btn--sm">Filter</button>
         </form>
         <ActionForm action={setUnitStatus.bind(null, id)} className="we-stack">
@@ -122,9 +123,9 @@ export default async function UnitsPage({
           {canStatus && (
             <div className="we-row">
               <span className="we-help">Set ticked units to</span>
-              <select name="status" className="we-input we-select" style={{ maxWidth: 220 }} aria-label="New status">
+              <Select name="status" className="we-input we-select" style={{ maxWidth: 220 }} aria-label="New status">
                 {STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-              </select>
+              </Select>
               <button className="we-btn we-btn--secondary we-btn--sm">Update</button>
               <span className="we-help">Sales and handovers change status by themselves through their workflows.</span>
             </div>
@@ -141,16 +142,16 @@ export default async function UnitsPage({
             <ActionForm action={generateUnits.bind(null, id)} className="we-form-grid">
               <div className="we-field">
                 <label htmlFor="gphase">Phase</label>
-                <select id="gphase" name="phase_id" className="we-input we-select" required>
+                <Select id="gphase" name="phase_id" className="we-input we-select" required>
                   {(phases ?? []).map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field">
                 <label htmlFor="gtype">Unit type</label>
-                <select id="gtype" name="unit_type_id" className="we-input we-select">
+                <Select id="gtype" name="unit_type_id" className="we-input we-select">
                   <option value="">Not set</option>
                   {(types ?? []).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
+                </Select>
               </div>
               <div className="we-field"><label htmlFor="buildings">Buildings</label><input id="buildings" name="buildings" className="we-input we-mono" inputMode="numeric" required /></div>
               <div className="we-field"><label htmlFor="floors">Floors each (incl. ground)</label><input id="floors" name="floors" className="we-input we-mono" inputMode="numeric" required /></div>
@@ -171,7 +172,7 @@ export default async function UnitsPage({
               <div className="we-field"><label htmlFor="tname">Name</label><input id="tname" name="name" className="we-input" required placeholder="Villa, 4 bedrooms" /></div>
               <div className="we-field">
                 <label htmlFor="tcat">Category</label>
-                <select id="tcat" name="category" className="we-input we-select">{CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}</select>
+                <Select id="tcat" name="category" className="we-input we-select">{CATEGORIES.map((c) => <option key={c} value={c}>{c.replace("_", " ")}</option>)}</Select>
               </div>
               <div className="we-field"><label htmlFor="tarea">Area m²</label><input id="tarea" name="area_m2" className="we-input we-mono" /></div>
               <div className="we-field"><label htmlFor="tbed">Bedrooms</label><input id="tbed" name="bedrooms" className="we-input we-mono" /></div>

@@ -1,5 +1,6 @@
 import type { Field } from "@/lib/docs";
 import type { Option } from "@/lib/data";
+import { Select } from "@/components/Select";
 
 export function FieldInput({
   field,
@@ -23,17 +24,17 @@ export function FieldInput({
       break;
     case "select":
       input = (
-        <select id={id} name={id} className="we-input we-select" defaultValue={v}>
+        <Select id={id} name={id} className="we-input we-select" defaultValue={v}>
           {field.options?.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
-        </select>
+        </Select>
       );
       break;
     case "ref":
       input = (
-        <select id={id} name={id} className="we-input we-select" defaultValue={v ?? ""} required={field.required}>
+        <Select id={id} name={id} className="we-input we-select" defaultValue={v ?? ""} required={field.required}>
           <option value="">{field.required ? "Choose…" : "None"}</option>
           {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
+        </Select>
       );
       break;
     case "check":

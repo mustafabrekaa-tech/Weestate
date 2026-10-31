@@ -7,6 +7,7 @@ import { date } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { mailReady } from "@/lib/mail";
 import { addPerson, resetAuthenticator, resetPassword, updatePerson } from "../actions";
+import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "People and access" };
 
@@ -48,9 +49,9 @@ export default async function People({ searchParams }: { searchParams: Promise<{
           <form className="we-row we-filterbar" action="/admin/people">
             {asked && <input type="hidden" name="company" value={asked} />}
             <input name="q" defaultValue={q} className="we-input we-input--sm" placeholder="Search name or email" aria-label="Search" style={{ maxWidth: 260 }} />
-            <select name="dept" defaultValue={dept ?? ""} className="we-input we-select we-input--sm" aria-label="Department">
+            <Select name="dept" defaultValue={dept ?? ""} className="we-input we-select we-input--sm" aria-label="Department">
               <option value="">All departments</option>{deptOptions}
-            </select>
+            </Select>
             <button className="we-btn we-btn--secondary we-btn--sm">Filter</button>
             <span className="we-help">{list.length} of {all.length}{comp?.max_users ? ` · plan allows ${comp.max_users}` : ""}</span>
           </form>
@@ -82,7 +83,7 @@ export default async function People({ searchParams }: { searchParams: Promise<{
                         <div className="we-field"><label htmlFor={`n-${p.id}`}>Full name</label><input id={`n-${p.id}`} name="full_name" defaultValue={p.full_name} className="we-input" /></div>
                         <div className="we-field">
                           <label htmlFor={`d-${p.id}`}>Main department</label>
-                          <select id={`d-${p.id}`} name="department" defaultValue={p.department ?? ""} className="we-input we-select"><option value="">No department</option>{deptOptions}</select>
+                          <Select id={`d-${p.id}`} name="department" defaultValue={p.department ?? ""} className="we-input we-select"><option value="">No department</option>{deptOptions}</Select>
                         </div>
                       </div>
                       <fieldset className="we-fieldset we-choice">
@@ -127,7 +128,7 @@ export default async function People({ searchParams }: { searchParams: Promise<{
             <div className="we-field"><label htmlFor="full_name">Full name</label><input id="full_name" name="full_name" className="we-input" required /></div>
             <div className="we-field">
               <label htmlFor="department">Department</label>
-              <select id="department" name="department" className="we-input we-select" required>{deptOptions}</select>
+              <Select id="department" name="department" className="we-input we-select" required>{deptOptions}</Select>
             </div>
             <div className="we-field">
               <label htmlFor="password">Temporary password <span className="we-help">· optional</span></label>

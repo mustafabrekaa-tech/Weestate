@@ -7,6 +7,7 @@ import { date } from "@/lib/format";
 import { IMPORTS, type Column } from "@/lib/imports";
 import { createClient } from "@/lib/supabase/server";
 import { saveEntry } from "../actions";
+import { Select } from "@/components/Select";
 
 const PAGES = {
   customers: { title: "Customers and owners", table: "customers", order: "full_name", search: "full_name", list: ["full_name", "national_id", "phone", "email", "source", "broker"], writers: ["sales", "handover", "community"] },
@@ -90,9 +91,9 @@ function Input({ c, value, kind }: { c: Column; value: unknown; kind: Kind }) {
     <div className="we-field" style={wide ? { gridColumn: "1 / -1" } : undefined}>
       <label htmlFor={id}>{c.label}{c.required && " *"}</label>
       {kind === "suppliers" && c.key === "kind" ? (
-        <select id={id} name={c.key} className="we-input we-select" defaultValue={v || "contractor"}>
+        <Select id={id} name={c.key} className="we-input we-select" defaultValue={v || "contractor"}>
           {["contractor", "supplier", "consultant", "facility", "other"].map((k) => <option key={k} value={k}>{k[0]!.toUpperCase() + k.slice(1)}</option>)}
-        </select>
+        </Select>
       ) : c.key === "notes" ? (
         <textarea id={id} name={c.key} className="we-input" rows={2} defaultValue={v} />
       ) : (

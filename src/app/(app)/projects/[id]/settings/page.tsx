@@ -7,6 +7,7 @@ import { money } from "@/lib/format";
 import { PROJECT_TYPES } from "@/lib/options";
 import { createClient } from "@/lib/supabase/server";
 import { copyStructure, savePhase, saveSettings } from "../actions";
+import { Select } from "@/components/Select";
 
 type Check = { step: string; done: boolean; detail: string };
 const where: Record<string, string> = {
@@ -53,11 +54,11 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
             <div className="we-field"><label htmlFor="location">Area</label><input id="location" name="location" className="we-input" defaultValue={p.location} placeholder="New Cairo" /></div>
             <div className="we-field">
               <label htmlFor="project_type">Type</label>
-              <select id="project_type" name="project_type" className="we-input we-select" defaultValue={p.project_type}>{PROJECT_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              <Select id="project_type" name="project_type" className="we-input we-select" defaultValue={p.project_type}>{PROJECT_TYPES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
             </div>
             <div className="we-field">
               <label htmlFor="status">Stage</label>
-              <select id="status" name="status" className="we-input we-select" defaultValue={p.status}>{STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
+              <Select id="status" name="status" className="we-input we-select" defaultValue={p.status}>{STATUSES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
             </div>
             <div className="we-field"><label htmlFor="budget_egp">Headline budget (EGP)</label><input id="budget_egp" name="budget_egp" className="we-input we-mono" defaultValue={p.budget_egp} /></div>
             <div className="we-field"><label htmlFor="start_date">Start</label><input id="start_date" name="start_date" type="date" className="we-input" defaultValue={p.start_date ?? ""} /></div>
@@ -114,9 +115,9 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
           <h2>Copy from another project</h2>
           <p className="we-help" style={{ marginTop: 0 }}>Copies phases, unit types and budget lines (with zero amounts), so a similar project starts with the same structure.</p>
           <ActionForm action={copyStructure.bind(null, id)} className="we-row">
-            <select name="source" className="we-input we-select" style={{ maxWidth: 320 }} aria-label="Project to copy">
+            <Select name="source" className="we-input we-select" style={{ maxWidth: 320 }} aria-label="Project to copy">
               {others.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-            </select>
+            </Select>
             <button className="we-btn we-btn--secondary">Copy structure</button>
           </ActionForm>
         </section>

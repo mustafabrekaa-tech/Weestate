@@ -5,6 +5,7 @@ import { money } from "@/lib/format";
 import { getScope, scoped } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { addBoqItem } from "../actions";
+import { Select } from "@/components/Select";
 
 type Item = { id: string; section: string; code: string; description: string; unit: string; quantity: number; rate_egp: number; amount_egp: number; cost_codes: { code: string } | null };
 
@@ -72,17 +73,17 @@ export default async function BoqPage({ params }: { params: Promise<{ id: string
             <div className="we-field"><label htmlFor="rate_egp">Rate (EGP)</label><input id="rate_egp" name="rate_egp" className="we-input we-mono" inputMode="decimal" /></div>
             <div className="we-field">
               <label htmlFor="cost_code">Cost code</label>
-              <select id="cost_code" name="cost_code" className="we-input we-select">
+              <Select id="cost_code" name="cost_code" className="we-input we-select">
                 <option value="">None</option>
                 {(codes ?? []).map((c) => <option key={c.code} value={c.code}>{c.code} {c.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="we-field">
               <label htmlFor="phase">Phase</label>
-              <select id="phase" name="phase" className="we-input we-select">
+              <Select id="phase" name="phase" className="we-input we-select">
                 <option value="">Whole project</option>
                 {(phases ?? []).map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-              </select>
+              </Select>
             </div>
             <div className="we-field" style={{ alignSelf: "end" }}><button className="we-btn we-btn--primary">Save item</button></div>
           </ActionForm>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Select } from "@/components/Select";
 
 export type GanttActivity = {
   id: string; code: string; name: string; category: string; wbs: string; phase: string;
@@ -121,9 +122,9 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
           ))}
         </div>
         <label className="we-gantt-ctl" style={{ whiteSpace: "nowrap" }}>Group by
-          <select className="we-input we-select" value={group} onChange={(e) => { setGroup(e.target.value as Group); setClosed(new Set()); }}>
+          <Select className="we-input we-select" value={group} onChange={(e) => { setGroup(e.target.value as Group); setClosed(new Set()); }}>
             <option value="category">Engineering / execution</option><option value="wbs">WBS</option><option value="phase">Phase</option><option value="none">Nothing</option>
-          </select>
+          </Select>
         </label>
         <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={toToday}>Today</button>
         <label className="we-gantt-ctl"><input type="checkbox" checked={arrows} onChange={(e) => setArrows(e.target.checked)} /> Links</label>
