@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ActionForm } from "@/components/ActionForm";
 import { Curve, type Point } from "@/components/Curve";
 import { Gantt, type GanttActivity } from "@/components/Gantt";
@@ -36,6 +37,7 @@ function plannedPct(a: Activity, at: string) {
 
 export default async function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const supabase = await createClient();
   const me = await getMe();
   const [{ data: phases }, { data: updates }, { data: versions }, { data: acts }, { data: ap }, { data: lk }] = await Promise.all([
@@ -220,7 +222,7 @@ export default async function SchedulePage({ params }: { params: Promise<{ id: s
         <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>Schedules</h2>
           {(versions ?? []).length === 0 ? (
-            <div className="we-help">No schedule yet. Import one from Primavera P6, MS Project or Excel on the <Link href={`/projects/${id}/import`}>Import tab</Link>.</div>
+            <div className="we-help">No schedule yet. Import one from Primavera P6, MS Project or Excel on the <Link href={`${base}/import`}>Import tab</Link>.</div>
           ) : (
             <ul className="we-checklist">
               {(versions ?? []).map((v) => (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ActionForm } from "@/components/ActionForm";
 import { getMe, acts } from "@/lib/data";
 import { date, money } from "@/lib/format";
@@ -21,6 +22,7 @@ export default async function UnitsPage({
   searchParams: Promise<{ status?: string; phase?: string; q?: string }>;
 }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const { status, phase, q } = await searchParams;
   const supabase = await createClient();
   const me = await getMe();
@@ -42,7 +44,7 @@ export default async function UnitsPage({
     (summary ?? []).filter((s) => (ph === null || s.phase_id === ph) && s.status === st).reduce((a, s) => a + s.units, 0);
   const href = (o: Record<string, string | undefined>) => {
     const p = new URLSearchParams(Object.entries({ status, phase, q, ...o }).filter(([, v]) => v) as [string, string][]);
-    return `/projects/${id}/units${p.toString() ? `?${p}` : ""}`;
+    return `${base}/units${p.toString() ? `?${p}` : ""}`;
   };
 
   return (
@@ -77,7 +79,7 @@ export default async function UnitsPage({
       </section>
 
       <section className="we-stack">
-        <form className="we-row" action={`/projects/${id}/units`}>
+        <form className="we-row" action={`${base}/units`}>
           <input name="q" defaultValue={q} className="we-input" placeholder="Unit code" style={{ maxWidth: 180 }} aria-label="Unit code" />
           <select name="phase" defaultValue={phase ?? ""} className="we-input we-select" style={{ maxWidth: 200 }} aria-label="Phase">
             <option value="">All phases</option>

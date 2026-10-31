@@ -4,6 +4,7 @@ import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
 import { EarthMap, type EarthProject } from "@/components/EarthMap";
 import { readGeo } from "@/lib/geo";
+import { projectSlugs } from "@/lib/slug";
 import { getMe, sortQueue, type QueueItem, acts } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,13 +20,15 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const list = (projects ?? []) as ProjectStatus[];
   const items = sortQueue((queue ?? []) as QueueItem[]);
   const late = items.filter((q) => q.overdue);
+  const slugs = await projectSlugs();
+  const at = (id: string) => `/projects/${slugs.get(id) ?? id}`;
   const planOf = new Map((plans ?? []).map((x) => [x.id as string, x]));
   const earth: EarthProject[] = list
     .filter((p) => p.lat != null && p.lng != null)
     .map((p) => {
       const x = planOf.get(p.id);
       return {
-        id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, href: `/projects/${p.id}/console?view=earth`,
+        id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, href: `${at(p.id)}/console?view=earth`,
         plan: x?.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
         geo: readGeo(x?.plan_geo),
       };
@@ -62,7 +65,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
         <section className="we-panel">
           <div className="we-panel__head">
             <h2>On the map</h2>
-            <small>{list.length} project{list.length === 1 ? "" : "s"} · click a name to fly there · <Link href={`/projects/${focus!.id}/console?view=earth`}>open with units</Link></small>
+            <small>{list.length} project{list.length === 1 ? "" : "s"} · click a name to fly there · <Link href={`${at(focus!.id)}/console?view=earth`}>open with units</Link></small>
           </div>
           <EarthMap projects={earth} height={520} />
         </section>
@@ -70,7 +73,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
       {list.length > 1 && list.map((p) => (
         <section key={p.id} className="we-stack">
-          <h2 style={{ margin: 0 }}><Link href={`/projects/${p.id}`} style={{ color: "inherit", textDecoration: "none" }}>{p.name}</Link></h2>
+          <h2 style={{ margin: 0 }}><Link href={at(p.id)} style={{ color: "inherit", textDecoration: "none" }}>{p.name}</Link></h2>
           <Kpis p={p} />
         </section>
       ))}

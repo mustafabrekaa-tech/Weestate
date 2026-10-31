@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { projectBase } from "@/lib/slug";
 import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { Curve, type Point } from "@/components/Curve";
@@ -40,6 +41,7 @@ type Handover = { unit_id: string; status: string; scheduled_at: string | null; 
 
 export default async function DeliveryPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ stage?: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const { stage: stageParam } = await searchParams;
   const supabase = await createClient();
   const me = await getMe();
@@ -170,7 +172,7 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
             <h2>{HANDOVER_BY_KEY[sel]!.label} <span className="we-help">· {selRows.length} units</span></h2>
             <div className="we-help">{OWNER[sel]}</div>
           </div>
-          {selRows.length > 0 && <Link className="we-btn we-btn--primary we-btn--sm" href={`/projects/${id}/console?stage=${sel}`}>Select them on the map</Link>}
+          {selRows.length > 0 && <Link className="we-btn we-btn--primary we-btn--sm" href={`${base}/console?stage=${sel}`}>Select them on the map</Link>}
         </div>
         <div className="we-table-wrap" style={{ maxHeight: 420 }}>
           <table className="we-table">
@@ -187,7 +189,7 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
                     <td className="we-mono">{date(stageOf.get(r.id)?.handover_stage_at ?? null)}</td>
                     <td>{isLate ? <span className="we-chip we-chip--overdue">Late · {date(r.delivery_date)}</span> : <span className="we-mono">{date(r.delivery_date)}</span>}</td>
                     <td className="we-mono">{Math.round(r.pct)}%</td>
-                    <td style={{ textAlign: "right" }}><Link className="we-link" href={`/projects/${id}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
+                    <td style={{ textAlign: "right" }}><Link className="we-link" href={`${base}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
                   </tr>
                 );
               })}
@@ -266,7 +268,7 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
         <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>How a unit moves</h2>
           <p className="we-help" style={{ margin: 0 }}>
-            Construction progress comes from the <Link href={`/projects/${id}/construction`}>Construction progress</Link> tab. A unit is ready when every stage is at 100%.
+            Construction progress comes from the <Link href={`${base}/construction`}>Construction progress</Link> tab. A unit is ready when every stage is at 100%.
             Then it moves through the handover stages above (planned to submit, consultant, snagging, QC, initial handover, client) from the unit console, or when Customer care finishes a <Link href={`/docs/handovers/new?project=${id}`}>unit handover</Link>.
           </p>
         </section>

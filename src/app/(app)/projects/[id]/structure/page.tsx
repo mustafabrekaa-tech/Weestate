@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ActionForm } from "@/components/ActionForm";
 import { acts, getMe } from "@/lib/data";
 import { UNIT_STATUS } from "@/lib/site";
@@ -14,6 +15,7 @@ type U = { phase_id: string | null; zone_id: string | null; building_id: string 
 // those, with unit counts by status, and the tools to change it.
 export default async function Structure({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const supabase = await createClient();
   const [me, { data: phases }, { data: zones }, { data: buildings }, { data: units }] = await Promise.all([
     getMe(),
@@ -94,7 +96,7 @@ export default async function Structure({ params }: { params: Promise<{ id: stri
       <section className="we-card we-stack">
         <div className="we-row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Phases, zones and buildings</h2>
-          <Link className="we-link" href={`/projects/${id}/site`}>See it in 3D</Link>
+          <Link className="we-link" href={`${base}/site`}>See it in 3D</Link>
         </div>
         <p className="we-help" style={{ margin: 0 }}>
           Pick any of these in the bar above and every tab, including the 3D site, shows just that part of the project.

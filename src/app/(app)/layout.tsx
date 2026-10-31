@@ -5,6 +5,7 @@ import { AppNav, Icon, type IconName } from "@/components/AppNav";
 import { SECTIONS } from "@/lib/sections";
 import { MenuCloser } from "@/components/MenuCloser";
 import { NavToggle } from "@/components/NavToggle";
+import { IdleGuard } from "@/components/IdleGuard";
 import { DOC_MODULE, TAB_MODULE } from "@/lib/access";
 import { brandStyle, getBrand } from "@/lib/brand";
 import { getMe, type Department, type QueueItem, acts } from "@/lib/data";
@@ -29,7 +30,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [{ data: depts }, { data: queue }, { data: projects }, { data: company }, brand, { data: hiddenRows }, { data: ws }] = await Promise.all([
     supabase.from("departments").select("*").order("sort"),
     supabase.from("work_queue").select("doc_type, department, overdue, company_id").eq("company_id", me.company_id ?? ""),
-    supabase.from("projects").select("id, name").eq("company_id", me.company_id ?? "").order("name"),
+    supabase.from("projects").select("id, name, slug").eq("company_id", me.company_id ?? "").order("name"),
     supabase.from("companies").select("name, logo_url, brand_color, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
     getBrand(),
     supabase.from("hidden_modules").select("module").eq("company_id", me.company_id ?? "").eq("department", me.department ?? ""),
@@ -61,9 +62,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   // The project the person is in (from the address), else their first one: its pages sit open in the menu.
   const list = projects ?? [];
-  const current = (seg[1] === "projects" && list.find((p) => p.id === seg[2])) || list[0] || null;
+  const current = (seg[1] === "projects" && list.find((p) => p.id === seg[2] || p.slug === seg[2])) || list[0] || null;
   const visible = SECTIONS.filter((x) => !hidden.has(TAB_MODULE[x.slug] ?? ""));
-  const sectionItem = (x: (typeof SECTIONS)[number]) => ({ href: `/projects/${current!.id}${x.slug ? `/${x.slug}` : ""}`, label: x.label, icon: x.icon as IconName });
+  const sectionItem = (x: (typeof SECTIONS)[number]) => ({ href: `/projects/${current!.slug || current!.id}${x.slug ? `/${x.slug}` : ""}`, label: x.label, icon: x.icon as IconName });
   const projectNav = current ? { name: current.name, main: visible.filter((x) => x.main).map(sectionItem), more: visible.filter((x) => !x.main).map(sectionItem) } : null;
 
   const groups = [
@@ -115,6 +116,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="we-appbar">
         <label className="we-menu-toggle we-btn we-btn--secondary we-btn--sm" htmlFor="we-menu">Menu</label>
         <NavToggle />
+        <IdleGuard />
         <Link href="/" className="we-appbar__home">
           {company?.logo_url ? (
             <img src={company.logo_url} alt={company.name} className="we-appbar__logo" />
@@ -131,13 +133,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </summary>
             <div className="we-menu__list">
               <span className="we-menu__who">{company?.name ?? "Projects"}</span>
-              {list.map((p) => <Link key={p.id} href={`/projects/${p.id}`}>{p.name}</Link>)}
+              {list.map((p) => <Link key={p.id} href={`/projects/${p.slug || p.id}`}>{p.name}</Link>)}
               {canSetup && <Link href="/projects/new">+ New project</Link>}
             </div>
           </details>
         )}
         {current && (
-          <form className="we-appsearch" action={`/projects/${current.id}/console`} method="get" role="search">
+          <form className="we-appsearch" action={`/projects/${current.slug || current.id}/console`} method="get" role="search">
             <Icon name="map" size={18} />
             <input name="q" type="search" placeholder="Find a unit, e.g. A03-014" aria-label="Find a unit" />
           </form>

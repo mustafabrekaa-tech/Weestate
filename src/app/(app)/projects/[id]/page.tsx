@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import type { ProjectStatus } from "@/components/Kpis";
 import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
@@ -16,6 +17,7 @@ type Check = { step: string; done: boolean; detail: string };
 
 export default async function ProjectOverview({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const supabase = await createClient();
   const [me, scope] = await Promise.all([getMe(), getScope(id)]);
   const [{ data: p }, { data: phases }, { data: progress }, { data: queue }, { data: checks }, { data: unitRows }] = await Promise.all([
@@ -69,14 +71,14 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
               <li key={c.step}><b>{c.step}</b> <span className="we-help">{c.detail}</span></li>
             ))}
           </ul>
-          <div><Link className="we-btn we-btn--secondary we-btn--sm" href={`/projects/${id}/settings`}>Open setup</Link></div>
+          <div><Link className="we-btn we-btn--secondary we-btn--sm" href={`${base}/settings`}>Open setup</Link></div>
         </section>
       )}
 
       <section className="we-card we-stack">
         <div className="we-row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Units <small>{scope.label || "whole project"}</small></h2>
-          <Link className="we-link" href={`/projects/${id}/units`}>Open units</Link>
+          <Link className="we-link" href={`${base}/units`}>Open units</Link>
         </div>
         {units.length ? (
           <>
@@ -97,7 +99,7 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
             </div>
           </>
         ) : (
-          <div className="we-empty">No units here yet. <Link href={`/projects/${id}/import?kind=units`}>Upload units from Excel</Link>.</div>
+          <div className="we-empty">No units here yet. <Link href={`${base}/import?kind=units`}>Upload units from Excel</Link>.</div>
         )}
       </section>
 
@@ -107,14 +109,14 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
           {project.lat != null && project.lng != null ? (
             <SiteMap pins={[{ id, lat: project.lat, lng: project.lng, label: project.name }]} zoom={project.map_zoom} height={380} />
           ) : (
-            <div className="we-empty">Not on the map yet. <Link href={`/projects/${id}/settings`}>Place it</Link>.</div>
+            <div className="we-empty">Not on the map yet. <Link href={`${base}/settings`}>Place it</Link>.</div>
           )}
         </section>
       </div>
 
       {facts && (
         <section className="we-card">
-          <h2>Project facts <Link className="we-link" style={{ fontSize: 13 }} href={`/projects/${id}/settings`}>Edit</Link></h2>
+          <h2>Project facts <Link className="we-link" style={{ fontSize: 13 }} href={`${base}/settings`}>Edit</Link></h2>
           <dl className="we-dl we-dl--cols">
             {([
               ["City", [facts.city, facts.district].filter(Boolean).join(", ") || facts.location],

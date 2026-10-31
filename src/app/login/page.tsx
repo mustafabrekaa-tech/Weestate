@@ -7,7 +7,8 @@ import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ idle?: string }> }) {
+  const { idle } = await searchParams;
   const b = await getBrand();
   // An address no company uses goes to the public website.
   if (hostKind((await headers()).get("host") ?? "") === "company" && !b.company) redirect(`https://${b.rootDomain}`);
@@ -29,6 +30,7 @@ export default async function LoginPage() {
         )}
       </section>
       <section className="we-login__form">
+        {idle && <p className="we-banner we-banner--info" role="status" style={{ marginBottom: 16 }}>You were signed out after 8 hours without activity. Sign in again to carry on.</p>}
         <LoginForm host={b.company ? `${b.company.slug}.${b.rootDomain}` : b.rootDomain} />
       </section>
     </div>

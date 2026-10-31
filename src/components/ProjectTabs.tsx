@@ -13,7 +13,7 @@ const groups: [string, string][][] = [
   [["structure", "Phases and buildings"], ["import", "Import Excel"], ["settings", "Setup"]],
 ];
 
-export function ProjectTabs({ id, hidden = [] }: { id: string; hidden?: string[] }) {
+export function ProjectTabs({ base, hidden = [] }: { base: string; hidden?: string[] }) {
   const path = usePathname();
   const active = path.split("/")[3] ?? "";
   return (
@@ -25,7 +25,7 @@ export function ProjectTabs({ id, hidden = [] }: { id: string; hidden?: string[]
           return (
             <div key={i} className="we-tabs__group">
               {list.map(([slug, label]) => (
-                <Link key={slug} href={`/projects/${id}${slug ? `/${slug}` : ""}`} aria-current={slug === active ? "page" : undefined}>
+                <Link key={slug} href={`${base}${slug ? `/${slug}` : ""}`} aria-current={slug === active ? "page" : undefined}>
                   {label}
                 </Link>
               ))}

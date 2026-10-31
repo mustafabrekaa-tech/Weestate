@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ConsoleSection } from "@/components/ConsoleSection";
 import { SitePlan } from "@/components/SitePlan";
 import { acts, getMe } from "@/lib/data";
@@ -9,6 +10,7 @@ import { addModel, changeUnitStatus, removeModel, saveLayout, saveOutline } from
 
 export default async function SitePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const { view } = await searchParams;
   const supabase = await createClient();
   const { data: pp } = await supabase.from("projects").select("plan_image").eq("id", id).maybeSingle();
@@ -18,8 +20,8 @@ export default async function SitePage({ params, searchParams }: { params: Promi
         <div className="we-row" style={{ justifyContent: "space-between" }}>
           <p className="we-help" style={{ margin: 0 }}>The project in 3D, built from the masterplan. Colour it by handover, construction, sales or delivery date; click units to open them.</p>
           <div className="we-seg we-seg--light">
-            <Link href={`/projects/${id}/site`} className="is-on">3D masterplan</Link>
-            <Link href={`/projects/${id}/site?view=map`}>Satellite map and models</Link>
+            <Link href={`${base}/site`} className="is-on">3D masterplan</Link>
+            <Link href={`${base}/site?view=map`}>Satellite map and models</Link>
           </div>
         </div>
         <ConsoleSection projectId={id} mode="sales" view="3d" title="3D site" height={640} />
@@ -42,8 +44,8 @@ export default async function SitePage({ params, searchParams }: { params: Promi
     {pp?.plan_image && (
       <div className="we-row" style={{ justifyContent: "flex-end", marginBottom: 8 }}>
         <div className="we-seg we-seg--light">
-          <Link href={`/projects/${id}/site`}>3D masterplan</Link>
-          <Link href={`/projects/${id}/site?view=map`} className="is-on">Satellite map and models</Link>
+          <Link href={`${base}/site`}>3D masterplan</Link>
+          <Link href={`${base}/site?view=map`} className="is-on">Satellite map and models</Link>
         </div>
       </div>
     )}
@@ -66,7 +68,7 @@ export default async function SitePage({ params, searchParams }: { params: Promi
       removeModel={removeModel.bind(null, id)}
     >
       {canBuild && (
-        <Link className="we-link" href={`/projects/${id}/structure`}>Add or change phases, zones and buildings</Link>
+        <Link className="we-link" href={`${base}/structure`}>Add or change phases, zones and buildings</Link>
       )}
     </SitePlan>
     </>

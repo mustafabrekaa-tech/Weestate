@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ColumnChart, Donut, Sparkline, type Col } from "@/components/Charts";
 import type { ProjectStatus } from "@/components/Kpis";
 import { SCurve, type CurvePoint } from "@/components/SCurve";
@@ -49,7 +50,7 @@ export async function ProjectDashboard({ id, me, greeting }: { id: string; me: P
   const d = await loadDash(supabase, id);
   if (!d.p) return null;
   const p = d.p;
-  const base = `/projects/${id}`;
+  const base = await projectBase(id);
   const today = new Date().toISOString().slice(0, 10);
 
   // Progress per phase (latest) and the project curve weighted by phase budget.

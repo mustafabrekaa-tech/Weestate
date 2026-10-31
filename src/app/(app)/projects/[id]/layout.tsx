@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PageTips } from "@/components/PageTips";
@@ -15,6 +16,7 @@ const statusLabel: Record<string, string> = {
 
 export default async function ProjectLayout({ children, params }: { children: React.ReactNode; params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const supabase = await createClient();
   const [{ data: p }, me, scope] = await Promise.all([
     supabase.from("projects").select("id, code, name, location, status").eq("id", id).maybeSingle(),
@@ -41,11 +43,11 @@ export default async function ProjectLayout({ children, params }: { children: Re
           {sec && <p className="we-purpose">{sec.purpose}</p>}
         </div>
         {sheetFor[slug] && (
-          <Link className="we-btn we-btn--secondary we-btn--sm" href={`/projects/${id}/import?kind=${sheetFor[slug]}`}>Upload from Excel</Link>
+          <Link className="we-btn we-btn--secondary we-btn--sm" href={`${base}/import?kind=${sheetFor[slug]}`}>Upload from Excel</Link>
         )}
       </div>
       {sec?.tips && <PageTips id={sec.slug || "overview"} steps={sec.tips} />}
-      <ProjectTabs id={id} hidden={(hiddenRows ?? []).map((r) => r.module as string)} />
+      <ProjectTabs base={base} hidden={(hiddenRows ?? []).map((r) => r.module as string)} />
       <ScopeBar
         projectId={id}
         phases={phases ?? []}

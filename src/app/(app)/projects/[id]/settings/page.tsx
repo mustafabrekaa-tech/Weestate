@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { projectBase } from "@/lib/slug";
 import { ActionForm } from "@/components/ActionForm";
 import { SiteMap } from "@/components/SiteMap";
 import { getProjects } from "@/lib/data";
@@ -17,6 +18,7 @@ const STATUSES: [string, string][] = [
 
 export default async function SetupPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const base = await projectBase(id);
   const supabase = await createClient();
   const [{ data: p }, { data: phases }, { data: checks }, projects] = await Promise.all([
     supabase.from("projects").select("*").eq("id", id).single(),
@@ -36,7 +38,7 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
             <li key={c.step} className={c.done ? "is-done" : ""}>
               <b>{c.step}</b>{" "}
               {c.done ? <span className="we-help">Done</span> : (
-                <Link href={c.step === "People" ? "/admin/people" : `/projects/${id}/${where[c.step] ?? ""}`}>{c.detail}</Link>
+                <Link href={c.step === "People" ? "/admin/people" : `${base}/${where[c.step] ?? ""}`}>{c.detail}</Link>
               )}
             </li>
           ))}
