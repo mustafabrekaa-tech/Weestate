@@ -21,12 +21,21 @@ create or replace view public.phase_status with (security_invoker = true) as
            FROM payment_certificates pc JOIN contracts c ON c.id = pc.contract_id
           WHERE pc.status <> ALL (ARRAY['draft'::text, 'rejected'::text])
           GROUP BY c.phase_id
+        ), last_pct AS (
+         SELECT DISTINCT ON (ap.activity_id) ap.activity_id, ap.actual_pct
+           FROM activity_progress ap
+          ORDER BY ap.activity_id, ap.period DESC
+        ), prog_date AS (
+         SELECT ap.project_id, max(ap.period) AS as_of
+           FROM activity_progress ap
+          GROUP BY ap.project_id
         ), acts AS (
          -- imported schedule: weighted progress of the baseline activities, as of the last progress date
-         SELECT a.phase_id, a.weight, a.start_date, a.finish_date,
-                (SELECT ap.actual_pct FROM activity_progress ap WHERE ap.activity_id = a.id ORDER BY ap.period DESC LIMIT 1) AS pct,
-                (SELECT max(ap.period) FROM activity_progress ap WHERE ap.project_id = a.project_id) AS as_of
-           FROM activities a JOIN schedule_versions v ON v.id = a.version_id AND v.is_baseline
+         SELECT a.phase_id, a.weight, a.start_date, a.finish_date, lp.actual_pct AS pct, pd.as_of
+           FROM activities a
+           JOIN schedule_versions v ON v.id = a.version_id AND v.is_baseline
+           JOIN prog_date pd ON pd.project_id = a.project_id
+           LEFT JOIN last_pct lp ON lp.activity_id = a.id
           WHERE a.phase_id IS NOT NULL AND COALESCE(a.weight, 0) > 0
         ), sched AS (
          SELECT acts.phase_id, max(acts.as_of) AS as_of,
@@ -38,7 +47,6 @@ create or replace view public.phase_status with (security_invoker = true) as
                   / NULLIF(sum(acts.weight), 0), 1) AS planned_pct
            FROM acts
           GROUP BY acts.phase_id
-         HAVING max(acts.as_of) IS NOT NULL
         )
  SELECT ph.id, ph.project_id, ph.code, ph.name,
     COALESCE(b.amount, ph.budget_egp) AS bac_egp,
