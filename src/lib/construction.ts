@@ -27,8 +27,9 @@ export async function loadConstruction(supabase: Supa, project: string, scope: S
     fetchAll<BuildUnit>((a, b) =>
       scoped(supabase.from("units").select("id, code, unit_type, status, delivery_date, phase_id, zone_id, building_id").eq("project_id", project), scope, { zone: true, building: true })
         .order("code").range(a, b)),
-    fetchAll<{ unit_id: string; stage_id: string; pct: number; as_of: string }>((a, b) =>
-      supabase.from("unit_stage_now").select("unit_id, stage_id, pct, as_of").eq("project_id", project).range(a, b)),
+    // One call returns the latest figure per unit and stage (reading the view page by page timed out).
+    supabase.rpc("unit_stage_latest", { p_project: project }).then(({ data }) =>
+      ((data ?? []) as [string, string, number, string][]).map(([unit_id, stage_id, pct, as_of]) => ({ unit_id, stage_id, pct, as_of }))),
   ]);
   const stages = ((st ?? []) as Stage[]).map((s) => ({ ...s, weight: Number(s.weight) }));
   const totalW = stages.reduce((s, x) => s + x.weight, 0) || 1;
