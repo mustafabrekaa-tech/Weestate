@@ -1,4 +1,8 @@
+import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { PageTips } from "@/components/PageTips";
+import { SECTION_BY_SLUG } from "@/lib/sections";
 import { ProjectTabs } from "@/components/ProjectTabs";
 import { ScopeBar } from "@/components/ScopeBar";
 import { getMe } from "@/lib/data";
@@ -25,14 +29,22 @@ export default async function ProjectLayout({ children, params }: { children: Re
     scoped(supabase.from("units").select("id", { count: "exact", head: true }).eq("project_id", id), scope, { zone: true, building: true }),
     me?.is_admin ? Promise.resolve({ data: [] }) : supabase.from("hidden_modules").select("module").eq("company_id", me?.company_id ?? "").eq("department", me?.department ?? ""),
   ]);
+  const slug = ((await headers()).get("x-pathname") ?? "").split("/")[3] ?? "";
+  const sec = SECTION_BY_SLUG[slug];
+  const sheetFor: Record<string, string> = { budget: "budget", schedule: "activities", boq: "boq", contracts: "contracts", units: "units", cashflow: "payments", structure: "buildings" };
   return (
     <>
-      <div className="we-pagehead">
+      <div className="we-pagehead we-pagehead--intro">
         <div>
-          <div className="we-eyebrow">{[p.code, p.location, statusLabel[p.status]].filter(Boolean).join(" · ")}</div>
-          <h1>{p.name}</h1>
+          <div className="we-eyebrow we-eyebrow--brand">{[p.name, p.code, statusLabel[p.status]].filter(Boolean).join(" · ")}</div>
+          <h1>{sec ? sec.title : p.name}</h1>
+          {sec && <p className="we-purpose">{sec.purpose}</p>}
         </div>
+        {sheetFor[slug] && (
+          <Link className="we-btn we-btn--secondary we-btn--sm" href={`/projects/${id}/import?kind=${sheetFor[slug]}`}>Upload from Excel</Link>
+        )}
       </div>
+      {sec?.tips && <PageTips id={sec.slug || "overview"} steps={sec.tips} />}
       <ProjectTabs id={id} hidden={(hiddenRows ?? []).map((r) => r.module as string)} />
       <ScopeBar
         projectId={id}

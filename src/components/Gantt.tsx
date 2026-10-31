@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GanttActivity = {
   id: string; code: string; name: string; category: string; wbs: string; phase: string;
@@ -28,6 +28,8 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
   const [q, setQ] = useState("");
   const [arrows, setArrows] = useState(true);
   const [closed, setClosed] = useState<Set<string>>(new Set());
+  const [sel, setSel] = useState<string | null>(null);
+  const box = useRef<HTMLDivElement>(null);
 
   const dated = activities.filter((a) => a.start);
   const t0 = useMemo(() => {
@@ -92,9 +94,18 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
         const into = l.type === "FF" || l.type === "SF" ? 1 : -1; // arrive from the right for finish links
         const midX = into < 0 ? Math.min(fromX + 6, toX - 6) : Math.max(fromX + 6, toX + 6);
         const d = `M${fromX},${y1} H${midX} V${y2} H${toX + into * -1}`;
-        return [{ d, crit: p.critical && s.critical, key: `${l.pred}-${l.succ}` }];
+        return [{ d, crit: p.critical && s.critical, on: !!sel && (l.pred === sel || l.succ === sel), key: `${l.pred}-${l.succ}` }];
       })
     : [];
+
+  const toToday = () => { if (box.current) box.current.scrollTo({ left: Math.max(0, x(today) - 240), behavior: "smooth" }); };
+  // Open on today rather than the start of the project.
+  useEffect(() => { if (box.current) box.current.scrollLeft = Math.max(0, x(today) - 240); }, [zoom]); // eslint-disable-line react-hooks/exhaustive-deps
+  const picked = sel ? activities.find((a) => a.id === sel) : undefined;
+  const preds = picked ? links.filter((l) => l.succ === picked.id).map((l) => ({ l, a: activities.find((a) => a.id === l.pred) })).filter((r) => r.a) : [];
+  const succs = picked ? links.filter((l) => l.pred === picked.id).map((l) => ({ l, a: activities.find((a) => a.id === l.succ) })).filter((r) => r.a) : [];
+  const days = (a: GanttActivity) => (a.start && a.finish ? day(a.finish) - day(a.start) + 1 : 0);
+  const linkName: Record<string, string> = { FS: "finish to start", SS: "start to start", FF: "finish to finish", SF: "start to finish" };
 
   if (!dated.length) return <div className="we-card we-empty">No activities with dates yet.</div>;
 
@@ -114,6 +125,7 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
             <option value="category">Engineering / execution</option><option value="wbs">WBS</option><option value="phase">Phase</option><option value="none">Nothing</option>
           </select>
         </label>
+        <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={toToday}>Today</button>
         <label className="we-gantt-ctl"><input type="checkbox" checked={arrows} onChange={(e) => setArrows(e.target.checked)} /> Links</label>
         <input className="we-input" placeholder="Find an activity" value={q} onChange={(e) => setQ(e.target.value)} style={{ maxWidth: 220 }} />
         <span className="we-gantt-legend">
@@ -121,7 +133,35 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
         </span>
       </div>
 
-      <div className="we-gantt" style={{ ["--gw" as string]: `${width}px`, ["--left" as string]: `${LEFT}px` }}>
+      {picked && (
+        <div className="we-gantt-detail" role="region" aria-label="Selected activity">
+          <div className="we-gantt-detail__head">
+            <div>
+              <div className="we-eyebrow">{[picked.category, picked.phase, picked.wbs].filter(Boolean).join(" · ")}</div>
+              <h3 className="we-h3"><span className="we-code">{picked.code}</span> {picked.name}</h3>
+            </div>
+            <div className="we-row" style={{ gap: 8 }}>
+              {picked.critical && <span className="we-chip we-chip--overdue">Critical path</span>}
+              {late(picked) && <span className="we-chip we-chip--overdue">Late</span>}
+              {!picked.critical && picked.float != null && <span className="we-chip we-chip--draft">Float {picked.float} days</span>}
+              <button type="button" className="we-btn we-btn--ghost we-btn--sm" onClick={() => setSel(null)} aria-label="Close">Close</button>
+            </div>
+          </div>
+          <dl className="we-dl we-dl--cols">
+            <div><dt>Start</dt><dd className="we-mono">{fmt(picked.start)}</dd></div>
+            <div><dt>Finish</dt><dd className="we-mono">{picked.milestone ? "Milestone" : fmt(picked.finish)}</dd></div>
+            <div><dt>Duration</dt><dd className="we-mono">{picked.milestone ? "–" : `${days(picked)} days`}</dd></div>
+            <div><dt>Done / plan today</dt><dd className="we-mono">{Math.round(picked.actual)}% / {Math.round(picked.plan)}%</dd></div>
+          </dl>
+          <div className="we-track" style={{ height: 10 }}><i style={{ width: `${picked.actual}%` }} /><b style={{ left: `${Math.min(100, picked.plan)}%` }} /></div>
+          <div className="we-gantt-detail__links">
+            <div><b>Comes after</b>{preds.length === 0 ? <p className="we-help">Nothing: it can start on its own date.</p> : <ul>{preds.map(({ l, a }) => <li key={a!.id}><button type="button" className="we-link" onClick={() => setSel(a!.id)}>{a!.code} {a!.name}</button> <span className="we-help">{linkName[l.type] ?? l.type}{l.lag ? `, lag ${l.lag} d` : ""}</span></li>)}</ul>}</div>
+            <div><b>Holds up</b>{succs.length === 0 ? <p className="we-help">Nothing waits on it.</p> : <ul>{succs.map(({ l, a }) => <li key={a!.id}><button type="button" className="we-link" onClick={() => setSel(a!.id)}>{a!.code} {a!.name}</button> <span className="we-help">{linkName[l.type] ?? l.type}{l.lag ? `, lag ${l.lag} d` : ""}</span></li>)}</ul>}</div>
+          </div>
+        </div>
+      )}
+
+      <div className="we-gantt" ref={box} style={{ ["--gw" as string]: `${width}px`, ["--left" as string]: `${LEFT}px` }}>
         <div className="we-gantt__head">
           <div className="we-gantt__cols"><span>Activity</span><span>Start</span><span>Finish</span><span className="num">Done</span></div>
           <div className="we-gantt__scale" style={{ width }}>
@@ -137,7 +177,7 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
                 <marker id="ga" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#8a96a0" /></marker>
                 <marker id="gc" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L6,3 L0,6 z" fill="#c0392b" /></marker>
               </defs>
-              {paths.map((p) => <path key={p.key} d={p.d} className={p.crit ? "is-crit" : ""} markerEnd={`url(#${p.crit ? "gc" : "ga"})`} />)}
+              {paths.map((p) => <path key={p.key} d={p.d} className={`${p.crit ? "is-crit" : ""}${p.on ? " is-on" : ""}`} markerEnd={`url(#${p.crit ? "gc" : "ga"})`} />)}
             </svg>
           </div>
           {lines.map((l, i) => {
@@ -158,7 +198,8 @@ export function Gantt({ activities, links, today }: { activities: GanttActivity[
             const isLate = late(a);
             const tip = `${a.code} · ${a.name}\n${fmt(a.start)} → ${fmt(a.finish)}${a.float != null ? ` · float ${a.float}d` : ""}\nPlan today ${Math.round(a.plan)}% · done ${Math.round(a.actual)}%`;
             return (
-              <div key={a.id} className={`we-gantt__row${a.critical ? " is-crit" : ""}${isLate ? " is-late" : ""}`} style={{ top: i * ROW }} title={tip}>
+              <div key={a.id} className={`we-gantt__row${a.critical ? " is-crit" : ""}${isLate ? " is-late" : ""}${sel === a.id ? " is-sel" : ""}`} style={{ top: i * ROW }} title={tip}
+                onClick={() => setSel(sel === a.id ? null : a.id)}>
                 <div className="we-gantt__left">
                   <span className="we-gantt__name"><span className="we-code">{a.code}</span> {a.name}</span>
                   <span>{fmt(a.start)}</span><span>{a.milestone ? "" : fmt(a.finish)}</span>

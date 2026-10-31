@@ -6,8 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { type Mode, UnitConsole } from "./UnitConsole";
 
 // The unit console for one project, loaded on the server.
-export async function ConsoleSection({ projectId, mode, view, title, height }: {
-  projectId: string; mode?: Mode; view?: "plan" | "tiles" | "3d"; title?: string; height?: number;
+export async function ConsoleSection({ projectId, mode, view, title, height, q, stage }: {
+  projectId: string; mode?: Mode; view?: "plan" | "tiles" | "3d"; title?: string; height?: number; q?: string; stage?: string;
 }) {
   const supabase = await createClient();
   const [data, me, scope] = await Promise.all([loadConsole(supabase, projectId), getMe(), getScope(projectId)]);
@@ -21,6 +21,8 @@ export async function ConsoleSection({ projectId, mode, view, title, height }: {
       title={title}
       height={height}
       initial={{ phase: scope.phase, zone: scope.zone }}
+      initialQ={q}
+      initialStage={stage}
       can={{
         handover: acts(me, ["pm", "handover", "quality", "site", "tech_office"]),
         build: acts(me, ["site", "tech_office", "quality", "pm", "cost_control"]),

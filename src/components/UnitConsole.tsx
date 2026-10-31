@@ -74,7 +74,7 @@ function toggle<T>(set: Set<T>, v: T) {
 
 export function UnitConsole({
   projectId, units, phases, zones, buildings, stages, stagePct, plan, initialMode = "handover", initialView,
-  can, actions, title = "Unit console", height = 620, initial,
+  can, actions, title = "Unit console", height = 620, initial, initialQ = "", initialStage,
 }: {
   projectId: string;
   units: CUnit[];
@@ -96,6 +96,8 @@ export function UnitConsole({
   title?: string;
   height?: number;
   initial?: { phase?: string; zone?: string };
+  initialQ?: string;
+  initialStage?: string;
 }) {
   const hasPlan = !!plan && units.some((u) => u.poly);
   const [mode, setMode] = useState<Mode>(initialMode);
@@ -103,12 +105,21 @@ export function UnitConsole({
   const [fPhase, setFPhase] = useState<Set<string>>(new Set(initial?.phase ? [initial.phase] : []));
   const [fZone, setFZone] = useState<Set<string>>(new Set(initial?.zone ? [initial.zone] : []));
   const [fType, setFType] = useState<Set<string>>(new Set());
-  const [fBucket, setFBucket] = useState<Set<string>>(new Set());
+  const [fBucket, setFBucket] = useState<Set<string>>(new Set(initialStage && initialMode === "handover" ? [initialStage] : []));
   const [prioOnly, setPrioOnly] = useState(false);
-  const [q, setQ] = useState("");
-  const [sel, setSel] = useState<Set<string>>(new Set());
-  const [focus, setFocus] = useState<string | null>(null);
-  const [multi, setMulti] = useState(false);
+  const [q, setQ] = useState(initialQ);
+  // Opened from a link: select the unit searched for, or every unit of the stage asked for.
+  const [sel, setSel] = useState<Set<string>>(() => {
+    const exact = initialQ ? units.find((u) => u.code.toLowerCase() === initialQ.trim().toLowerCase()) : undefined;
+    if (exact) return new Set([exact.id]);
+    if (initialStage) return new Set(units.filter((u) => u.ho === initialStage).map((u) => u.id));
+    return new Set();
+  });
+  const [focus, setFocus] = useState<string | null>(() => {
+    const exact = initialQ ? units.find((u) => u.code.toLowerCase() === initialQ.trim().toLowerCase()) : undefined;
+    return exact?.id ?? null;
+  });
+  const [multi, setMulti] = useState(true);
   const [tab, setTab] = useState<"handover" | "construction" | "delivery">(initialMode === "construction" ? "construction" : initialMode === "delivery" ? "delivery" : "handover");
   const [note, setNote] = useState<ActionResult>(null);
   const [pending, start] = useTransition();
@@ -203,6 +214,10 @@ export function UnitConsole({
   }, []);
 
   const selIds = [...sel].filter((i) => byId.has(i));
+  // When every selected unit is in the same stage, offer the next one as a single click.
+  const selStages = new Set(selIds.map((i) => byId.get(i)!.ho));
+  const sameStage = selStages.size === 1 ? HANDOVER_BY_KEY[[...selStages][0]!] : undefined;
+  const nextStage = sameStage && sameStage.i < HANDOVER.length - 1 ? HANDOVER[sameStage.i + 1] : undefined;
   const focusUnit = focus ? byId.get(focus) : undefined;
 
   const exportCsv = () => {
@@ -292,7 +307,7 @@ export function UnitConsole({
         <div className="we-uc__stagewrap">
           <div className="we-uc__selbar">
             <label className="we-uc__multi">
-              <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} /> Multi-select
+              <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} /> Clicks add to the selection
             </label>
             <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => selectMany(shown.map((u) => u.id), false)} disabled={!shown.length}>
               Select all {shown.length} shown
@@ -350,6 +365,17 @@ export function UnitConsole({
                 {can.build && <button type="button" role="tab" aria-selected={tab === "construction"} className={tab === "construction" ? "is-on" : ""} onClick={() => setTab("construction")}>Construction</button>}
                 {can.dates && <button type="button" role="tab" aria-selected={tab === "delivery"} className={tab === "delivery" ? "is-on" : ""} onClick={() => setTab("delivery")}>Delivery date</button>}
               </div>
+              {tab === "handover" && can.handover && nextStage && (
+                <ActionForm action={actions.handover}>
+                  <input type="hidden" name="ids" value={selIds.join(",")} />
+                  <input type="hidden" name="stage" value={nextStage.key} />
+                  <input type="hidden" name="at" value={today} />
+                  <button className="we-btn we-btn--primary we-uc__next">
+                    Move {sel.size === 1 ? "this unit" : `all ${sel.size}`} to {nextStage.label}
+                  </button>
+                  <span className="we-help">Or pick any stage and date below.</span>
+                </ActionForm>
+              )}
               {tab === "handover" && can.handover && (
                 <ActionForm action={actions.handover}>
                   <input type="hidden" name="ids" value={selIds.join(",")} />
@@ -365,7 +391,7 @@ export function UnitConsole({
                     <div className="we-field" style={{ flex: 1 }}><label htmlFor="uc-at">Date</label><input id="uc-at" name="at" type="date" className="we-input" defaultValue={today} /></div>
                   </div>
                   <div className="we-field"><label htmlFor="uc-note">Note <span className="we-help">· optional</span></label><input id="uc-note" name="note" className="we-input" placeholder="Snag list sent, keys handed…" /></div>
-                  <button className="we-btn we-btn--primary">Move {sel.size} unit{sel.size === 1 ? "" : "s"}</button>
+                  <button className="we-btn we-btn--secondary">Move {sel.size} unit{sel.size === 1 ? "" : "s"} to the stage picked</button>
                 </ActionForm>
               )}
               {tab === "construction" && can.build && (

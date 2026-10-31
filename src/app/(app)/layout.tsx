@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { AppNav } from "@/components/AppNav";
+import { AppNav, Icon, type IconName } from "@/components/AppNav";
+import { SECTIONS } from "@/lib/sections";
 import { MenuCloser } from "@/components/MenuCloser";
 import { DOC_MODULE, TAB_MODULE } from "@/lib/access";
 import { brandStyle, getBrand } from "@/lib/brand";
@@ -57,27 +58,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canSetup = acts(me, ["pm", "cost_control"]);
   const waiting = (type: string) => items.filter((q) => q.doc_type === type);
 
+  // The project the person is in (from the address), else their first one: its pages sit open in the menu.
+  const list = projects ?? [];
+  const current = (seg[1] === "projects" && list.find((p) => p.id === seg[2])) || list[0] || null;
+  const visible = SECTIONS.filter((x) => !hidden.has(TAB_MODULE[x.slug] ?? ""));
+  const sectionItem = (x: (typeof SECTIONS)[number]) => ({ href: `/projects/${current!.id}${x.slug ? `/${x.slug}` : ""}`, label: x.label, icon: x.icon as IconName });
+  const projectNav = current ? { name: current.name, main: visible.filter((x) => x.main).map(sectionItem), more: visible.filter((x) => !x.main).map(sectionItem) } : null;
+
   const groups = [
-    {
-      key: "projects", label: "Projects", icon: "projects" as const,
-      items: [
-        ...(projects ?? []).map((p) => ({ href: `/projects/${p.id}`, label: p.name })),
-        ...(canSetup ? [{ href: "/projects/new", label: "+ New project" }] : []),
-      ],
-    },
-    {
-      key: "site", label: "Site and delivery", icon: "build" as const,
-      items: (projects ?? []).slice(0, 3).flatMap((p) => {
-        const pre = (projects ?? []).length > 1 ? `${p.name} · ` : "";
-        return [
-          { href: `/projects/${p.id}/console`, label: `${pre}Unit console` },
-          ...(hidden.has("construction") ? [] : [{ href: `/projects/${p.id}/construction`, label: `${pre}Construction progress` }]),
-          ...(hidden.has("handover") ? [] : [{ href: `/projects/${p.id}/delivery`, label: `${pre}Unit delivery` }]),
-          ...(hidden.has("planning") ? [] : [{ href: `/projects/${p.id}/schedule`, label: `${pre}Schedule and Gantt` }]),
-          ...(hidden.has("site") ? [] : [{ href: `/projects/${p.id}/site`, label: `${pre}3D site` }]),
-        ];
-      }),
-    },
     ...AREAS.filter((a) => !hidden.has(a.key)).map((a) => ({
       key: a.key, label: a.label, icon: a.icon,
       items: [
@@ -132,8 +120,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <img src={brand.logo || "/weestate-horizontal.svg"} alt={brand.appName} className="we-appbar__logo" />
           )}
         </Link>
-        <span className="we-appbar__project">{company?.name ?? "Projects"}</span>
+        {current && (
+          <details className="we-menu we-appbar__switch">
+            <summary className="we-projbtn">
+              <span className="we-projbtn__lbl">Project</span>
+              <span className="we-projbtn__name">{current.name}</span>
+              <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m5 8 5 5 5-5" /></svg>
+            </summary>
+            <div className="we-menu__list">
+              <span className="we-menu__who">{company?.name ?? "Projects"}</span>
+              {list.map((p) => <Link key={p.id} href={`/projects/${p.id}`}>{p.name}</Link>)}
+              {canSetup && <Link href="/projects/new">+ New project</Link>}
+            </div>
+          </details>
+        )}
+        {current && (
+          <form className="we-appsearch" action={`/projects/${current.id}/console`} method="get" role="search">
+            <Icon name="map" size={18} />
+            <input name="q" type="search" placeholder="Find a unit, e.g. A03-014" aria-label="Find a unit" />
+          </form>
+        )}
         <span className="we-appbar__spacer" />
+        <Link href="/my-work" className="we-iconbtn" aria-label={`Waiting on me: ${mine.length}`} title="Waiting on me">
+          <Icon name="inbox" />
+          {mine.length > 0 && <span className={`we-iconbtn__dot${mine.some((q) => q.overdue) ? " is-late" : ""}`}>{mine.length}</span>}
+        </Link>
         <details className="we-menu">
           <summary className="we-avatar" title={me.full_name || me.email}>{initials}</summary>
           <div className="we-menu__list we-menu__list--right">
@@ -149,10 +160,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="we-shell">
         <AppNav
           top={[
-            { href: "/", label: "Dashboard and map" },
-            { href: "/my-work", label: "Waiting on me", count: mine.length, late: mine.some((q) => q.overdue) },
-            ...(hidden.has("import") ? [] : [{ href: "/import", label: "Import from Excel" }]),
+            { href: "/", label: "Dashboard", icon: "chart" },
+            { href: "/my-work", label: "Waiting on me", count: mine.length, late: mine.some((q) => q.overdue), icon: "inbox" },
           ]}
+          project={projectNav}
           groups={groups}
         />
         <main className="we-main">

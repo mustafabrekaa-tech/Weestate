@@ -68,6 +68,42 @@ export default async function ConstructionPage({ params, searchParams }: { param
         <Kpi label="Last update" value={lastUpdate ? date(lastUpdate) : "–"} note={`${stages.length} stages`} />
       </div>
 
+      <div className="we-dash">
+        <section className="we-panel we-span-6">
+          <div className="we-panel__head"><h2>By phase</h2><small>dark bar built · gold line monthly plan</small></div>
+          <div className="we-bars">
+            {(phases ?? []).map((ph) => {
+              const ids = units.filter((u) => u.phase_id === ph.id).map((u) => u.id);
+              if (!ids.length) return null;
+              const a = ids.reduce((s2, u) => s2 + unitPct.get(u)!, 0) / ids.length;
+              const pl = Number([...(plans ?? [])].filter((x) => x.phase_id === ph.id).at(-1)?.planned_pct ?? 0);
+              return (
+                <a key={ph.id} className="we-barrow" href="?by=zone">
+                  <div><div className="we-barrow__name">{ph.name || ph.code}</div><div className="we-barrow__meta">{ids.length} units · {ids.filter((u) => unitPct.get(u)! >= 99.99).length} complete</div></div>
+                  <div><div className="we-barrow__val">{pct(a)}</div>{pl > 0 && <div className="we-barrow__var" style={{ color: a + 1 < pl ? "var(--status-overdue)" : "var(--status-done)" }}>{a + 1 < pl ? `${(pl - a).toFixed(1)} pts behind` : "on plan"}</div>}</div>
+                  <div className="we-track"><i style={{ width: `${Math.min(100, a)}%` }} />{pl > 0 && <b style={{ left: `${Math.min(100, pl)}%` }} />}</div>
+                </a>
+              );
+            })}
+          </div>
+        </section>
+        <section className="we-panel we-span-6">
+          <div className="we-panel__head"><h2>By work stage</h2><small>average of {units.length} units</small></div>
+          <div className="we-bars">
+            {stages.map((st) => {
+              const v = stagePct(units.map((u) => u.id), st.id);
+              return (
+                <div key={st.id} className="we-barrow">
+                  <div><div className="we-barrow__name">{st.name}</div><div className="we-barrow__meta">counts {st.weight}% of a unit</div></div>
+                  <div className="we-barrow__val">{pct(v)}</div>
+                  <div className="we-track"><i style={{ width: `${Math.min(100, v)}%`, background: v >= 99.99 ? "var(--status-done)" : undefined }} /></div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      </div>
+
       <ConsoleSection projectId={id} mode="construction" title="Pick units and record progress" height={560} />
 
       <section className="we-card we-stack">

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Kpis, type ProjectStatus } from "@/components/Kpis";
+import type { ProjectStatus } from "@/components/Kpis";
+import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
 import { SCurve, type CurvePoint } from "@/components/SCurve";
 import { SiteMap } from "@/components/SiteMap";
@@ -58,7 +59,7 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
 
   return (
     <>
-      <Kpis p={project} full />
+      <ProjectDashboard id={id} me={me} />
 
       {todo.length > 0 && (
         <section className="we-card we-stack">
@@ -102,10 +103,6 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
 
       <div className="we-grid we-grid--wide">
         <section className="we-card we-stack">
-          <h2 style={{ margin: 0 }}>Progress <small>planned against actual</small></h2>
-          <SCurve points={curve} />
-        </section>
-        <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>Site</h2>
           {project.lat != null && project.lng != null ? (
             <SiteMap pins={[{ id, lat: project.lat, lng: project.lng, label: project.name }]} zoom={project.map_zoom} height={380} />
@@ -138,29 +135,6 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
           {facts.description && <p style={{ margin: "16px 0 0" }}>{facts.description}</p>}
         </section>
       )}
-
-      <section className="we-card we-stack">
-        <h2 style={{ margin: 0 }}>Phases <small>latest monthly progress</small></h2>
-        <div className="we-table-wrap">
-          <table className="we-table">
-            <thead><tr><th>Phase</th><th className="num">Actual</th><th className="num">Plan</th><th className="num">SPI</th><th>As of</th></tr></thead>
-            <tbody>
-              {ph.map((x) => {
-                const l = latest.get(x.id);
-                return (
-                  <tr key={x.id}>
-                    <td><div className="we-title">{x.name}</div><div className="we-meta">Finish {date(x.finish_date)}</div></td>
-                    <td className="num">{pct(l?.actual_pct)}</td>
-                    <td className="num">{pct(l?.planned_pct)}</td>
-                    <td className="num">{l && l.planned_pct > 0 ? (l.actual_pct / l.planned_pct).toFixed(2) : "–"}</td>
-                    <td>{date(l?.period)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </section>
 
       <section className="we-stack">
         <h2 style={{ margin: 0 }}>Waiting items</h2>
