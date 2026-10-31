@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useCurrentProject, type ProjectItem } from "./useCurrentProject";
 
 type Item = { href: string; label: string; count?: number; late?: boolean; icon?: IconName };
 type Group = { key: string; label: string; icon: IconName; items: Item[] };
@@ -43,12 +44,17 @@ export function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   );
 }
 
-export function AppNav({ top, project, groups }: {
+export function AppNav({ top, projects, sections, groups }: {
   top: Item[];
-  project: { name: string; main: Item[]; more: Item[] } | null;
+  projects: ProjectItem[];
+  sections: { slug: string; label: string; icon: IconName; main: boolean }[];
   groups: Group[];
 }) {
   const path = usePathname();
+  // The open project's pages, following the project being viewed.
+  const current = useCurrentProject(projects);
+  const sectionItem = (x: (typeof sections)[number]): Item => ({ href: `/projects/${current!.slug || current!.id}${x.slug ? `/${x.slug}` : ""}`, label: x.label, icon: x.icon });
+  const project = current ? { name: current.name, main: sections.filter((x) => x.main).map(sectionItem), more: sections.filter((x) => !x.main).map(sectionItem) } : null;
   const active = (href: string, exact = false) => (href === "/" || exact ? path === href : path === href || path.startsWith(href + "/"));
   const link = (i: Item, exact = false) => (
     <Link key={i.href} href={i.href} aria-current={active(i.href, exact) ? "page" : undefined}>

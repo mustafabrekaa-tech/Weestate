@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Kpis, type ProjectStatus } from "@/components/Kpis";
 import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
@@ -47,7 +48,9 @@ export default async function Overview({ searchParams }: { searchParams: Promise
     });
   const canSetup = acts(me, ["pm", "cost_control"]);
 
-  const focus = list.find((p) => p.id === project) ?? list[0];
+  // The project asked for, else the one opened last (remembered by the project switcher), else the first.
+  const last = (await cookies()).get("we-project")?.value;
+  const focus = list.find((p) => p.id === project) ?? list.find((p) => p.id === last) ?? list[0];
 
   return (
     <>
