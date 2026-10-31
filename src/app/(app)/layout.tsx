@@ -65,6 +65,19 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(canSetup ? [{ href: "/projects/new", label: "+ New project" }] : []),
       ],
     },
+    {
+      key: "site", label: "Site and delivery", icon: "build" as const,
+      items: (projects ?? []).slice(0, 3).flatMap((p) => {
+        const pre = (projects ?? []).length > 1 ? `${p.name} · ` : "";
+        return [
+          { href: `/projects/${p.id}/console`, label: `${pre}Unit console` },
+          ...(hidden.has("construction") ? [] : [{ href: `/projects/${p.id}/construction`, label: `${pre}Construction progress` }]),
+          ...(hidden.has("handover") ? [] : [{ href: `/projects/${p.id}/delivery`, label: `${pre}Unit delivery` }]),
+          ...(hidden.has("planning") ? [] : [{ href: `/projects/${p.id}/schedule`, label: `${pre}Schedule and Gantt` }]),
+          ...(hidden.has("site") ? [] : [{ href: `/projects/${p.id}/site`, label: `${pre}3D site` }]),
+        ];
+      }),
+    },
     ...AREAS.filter((a) => !hidden.has(a.key)).map((a) => ({
       key: a.key, label: a.label, icon: a.icon,
       items: [

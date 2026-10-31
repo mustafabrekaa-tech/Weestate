@@ -466,3 +466,50 @@ export async function setDeliveryDates(id: string, _: ActionResult, form: FormDa
   if (error) return { error: error.message };
   return done(id, "delivery", `Planned delivery set for ${data} units.`);
 }
+
+// Bulk changes from the unit console: the units come as a list of ids ------------------------------
+const idsOf = (form: FormData) => str(form.get("ids")).split(",").map((s) => s.trim()).filter((s) => /^[0-9a-f-]{36}$/i.test(s));
+
+export async function bulkHandover(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const ids = idsOf(form);
+  if (!ids.length) return { error: "Select units on the map first." };
+  const stage = str(form.get("stage"));
+  if (!stage) return { error: "Choose the handover stage." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_handover_stage", { p_project: id, p_units: ids, p_stage: stage, p_at: str(form.get("at")) || null, p_note: str(form.get("note")) });
+  if (error) return { error: error.message };
+  return done(id, "console", `Moved ${data} unit${data === 1 ? "" : "s"} to this stage.`);
+}
+
+export async function bulkConstruction(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const ids = idsOf(form);
+  if (!ids.length) return { error: "Select units on the map first." };
+  const pctv = num(form.get("pct"));
+  if (pctv == null || Number.isNaN(pctv) || pctv < 0 || pctv > 100) return { error: "Enter a percentage between 0 and 100." };
+  const stages = form.getAll("stage_id").map(String).filter(Boolean);
+  if (!stages.length) return { error: "Tick at least one stage." };
+  const supabase = await createClient();
+  for (const stage of stages) {
+    const { error } = await supabase.rpc("record_unit_progress", { p_project: id, p_units: ids, p_stage: stage, p_pct: pctv, p_as_of: str(form.get("as_of")) || null });
+    if (error) return { error: denied(error, "Site, the Technical office, Quality or the PM") };
+  }
+  return done(id, "console", `Recorded ${pctv}% on ${stages.length} stage${stages.length > 1 ? "s" : ""} for ${ids.length} unit${ids.length === 1 ? "" : "s"}.`);
+}
+
+export async function bulkDelivery(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const ids = idsOf(form);
+  if (!ids.length) return { error: "Select units on the map first." };
+  const when = str(form.get("delivery_date"));
+  if (!when) return { error: "Pick the planned delivery date." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_delivery_dates", { p_project: id, p_units: ids, p_date: when });
+  if (error) return { error: error.message };
+  return done(id, "console", `Planned delivery set for ${data} unit${data === 1 ? "" : "s"}.`);
+}
+
+export async function bulkPriority(id: string, ids: string[], on: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_unit_priority", { p_project: id, p_units: ids, p_on: on });
+  if (error) return { error: error.message };
+  return done(id, "console", on ? `Marked ${data} as priority.` : `Took ${data} off the priority list.`);
+}

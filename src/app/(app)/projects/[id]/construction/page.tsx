@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/ActionForm";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { Curve, type Point } from "@/components/Curve";
 import { Kpi } from "@/components/Kpis";
 import { UnitPicker } from "@/components/UnitPicker";
@@ -67,6 +68,8 @@ export default async function ConstructionPage({ params, searchParams }: { param
         <Kpi label="Last update" value={lastUpdate ? date(lastUpdate) : "–"} note={`${stages.length} stages`} />
       </div>
 
+      <ConsoleSection projectId={id} mode="construction" title="Pick units and record progress" height={560} />
+
       <section className="we-card we-stack">
         <div className="we-row" style={{ justifyContent: "space-between" }}>
           <h2 style={{ margin: 0 }}>Progress by stage</h2>
@@ -104,7 +107,7 @@ export default async function ConstructionPage({ params, searchParams }: { param
         </section>
         {canRecord && (
           <section className="we-card we-stack">
-            <h2 style={{ margin: 0 }}>Record progress</h2>
+            <h2 style={{ margin: 0 }}>Record by phase or building</h2>
             <p className="we-help" style={{ margin: 0 }}>Set a stage&apos;s % for many units at once, for example all villas in a phase. Each entry is kept, so the curve shows progress over time.</p>
             <ActionForm action={recordConstruction.bind(null, id)} className="we-form-grid" resetOnOk>
               <UnitPicker phases={(phases ?? []).map((p) => ({ id: p.id, name: p.name || p.code }))} zones={(zones ?? []).map((z) => ({ id: z.id, name: z.name || z.code }))}
@@ -120,24 +123,6 @@ export default async function ConstructionPage({ params, searchParams }: { param
           </section>
         )}
       </div>
-
-      <section className="we-card we-stack">
-        <h2 style={{ margin: 0 }}>Every unit</h2>
-        <div className="we-row" style={{ gap: 12, fontSize: 12 }}>
-          {[0, 25, 50, 75, 100].map((v) => <span key={v} className="we-row" style={{ gap: 4 }}><i style={{ ...heat(v), width: 14, height: 10, borderRadius: 2, display: "inline-block" }} />{v === 0 ? "Not started" : v === 100 ? "Complete" : `${v}%`}</span>)}
-        </div>
-        {[...new Set(units.map((u) => name(phases, u.phase_id) || "No phase"))].map((ph) => (
-          <div key={ph} className="we-stack" style={{ gap: 6 }}>
-            <b style={{ fontSize: 13 }}>{ph}</b>
-            <div className="we-unitgrid">
-              {units.filter((u) => (name(phases, u.phase_id) || "No phase") === ph).map((u) => {
-                const v = unitPct.get(u.id)!;
-                return <span key={u.id} style={heat(v)} title={`${u.code} · ${u.unit_type} · ${Math.round(v)}%`}>{u.code.slice(-5)}</span>;
-              })}
-            </div>
-          </div>
-        ))}
-      </section>
 
       {canStages && (
         <details className="we-card">

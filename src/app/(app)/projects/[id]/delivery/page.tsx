@@ -3,7 +3,9 @@ import Link from "next/link";
 import { ActionForm } from "@/components/ActionForm";
 import { Curve, type Point } from "@/components/Curve";
 import { Kpi } from "@/components/Kpis";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { UnitPicker } from "@/components/UnitPicker";
+import { HANDOVER } from "@/lib/handover";
 import { fetchAll, loadConstruction } from "@/lib/construction";
 import { acts, getMe } from "@/lib/data";
 import { date, pct } from "@/lib/format";
@@ -21,7 +23,7 @@ const STEPS = [
   { key: "not_started", label: "Not started", color: "#c9ced3" },
   { key: "building", label: "Under construction", color: "#e2c27c" },
   { key: "ready", label: "Ready for handover", color: "#7fb08f" },
-  { key: "booked", label: "Handover in progress", color: "#5d8fc9" },
+  { key: "booked", label: "In handover", color: "#5d8fc9" },
   { key: "handed_over", label: "Handed over", color: "#2f6f46" },
 ] as const;
 type Step = (typeof STEPS)[number]["key"];
@@ -33,13 +35,16 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
   const supabase = await createClient();
   const me = await getMe();
   const scope = await getScope(id);
-  const [c, { data: phases }, { data: zones }, { data: buildings }, handovers] = await Promise.all([
+  const [c, { data: phases }, { data: zones }, { data: buildings }, handovers, stagesNow] = await Promise.all([
     loadConstruction(supabase, id, scope),
     supabase.from("phases").select("id, code, name").eq("project_id", id).order("code"),
     supabase.from("zones").select("id, code, name").eq("project_id", id).order("code"),
     supabase.from("buildings").select("id, code, name").eq("project_id", id).order("code"),
     fetchAll<Handover>((a, b) => supabase.from("unit_handovers").select("unit_id, status, scheduled_at, handed_over_at").eq("project_id", id).range(a, b)),
+    fetchAll<{ id: string; handover_stage: string; handover_stage_at: string | null }>((a, b) =>
+      supabase.from("units").select("id, handover_stage, handover_stage_at").eq("project_id", id).range(a, b)),
   ]);
+  const stageOf = new Map(stagesNow.map((r) => [r.id, r]));
   const { units, unitPct } = c;
   const canPlan = acts(me, ["pm", "cost_control", "handover", "sales"]);
   const phaseName = (v: string | null) => (phases ?? []).find((p) => p.id === v)?.name || (phases ?? []).find((p) => p.id === v)?.code || "No phase";
@@ -47,6 +52,8 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
   const ho = new Map<string, Handover>();
   for (const h of handovers) if (h.status !== "rejected") ho.set(h.unit_id, h);
   const handedAt = (u: { id: string; status: string; delivery_date: string | null }) => {
+    const st = stageOf.get(u.id);
+    if (st?.handover_stage === "client_delivered") return st.handover_stage_at ?? today;
     const h = ho.get(u.id);
     if (h?.status === "done") return (h.handed_over_at ?? h.scheduled_at ?? today).slice(0, 10);
     // Marked handed over without a handover record: count it on its planned date.
@@ -54,7 +61,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
   };
   const stepOf = (u: (typeof units)[number]): Step => {
     if (handedAt(u)) return "handed_over";
-    if (ho.has(u.id)) return "booked";
+    if (ho.has(u.id) || (stageOf.get(u.id)?.handover_stage ?? "not_started") !== "not_started") return "booked";
     const p = unitPct.get(u.id) ?? 0;
     if (p >= 99.99 || u.status === "ready") return "ready";
     return p > 0 ? "building" : "not_started";
@@ -87,7 +94,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
   const unitTable = (list: typeof rows, empty: string) => (
     <div className="we-table-wrap" style={{ maxHeight: 360 }}>
       <table className="we-table">
-        <thead><tr><th>Unit</th><th>Phase</th><th>Planned delivery</th><th>Construction</th><th>Where it is</th></tr></thead>
+        <thead><tr><th>Unit</th><th>Phase</th><th>Planned delivery</th><th>Construction</th><th>Handover stage</th></tr></thead>
         <tbody>
           {list.length === 0 && <tr><td colSpan={5} className="we-empty">{empty}</td></tr>}
           {list.slice(0, 200).map((r) => (
@@ -96,7 +103,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
               <td>{phaseName(r.phase_id)}</td>
               <td>{date(r.delivery_date)}</td>
               <td><div className="we-row" style={{ gap: 8, flexWrap: "nowrap" }}><div className="we-prog" style={{ flex: 1 }}><span style={{ width: `${r.pct}%` }} /></div>{Math.round(r.pct)}%</div></td>
-              <td>{STEPS.find((s) => s.key === r.step)!.label}</td>
+              <td>{HANDOVER.find((h) => h.key === (stageOf.get(r.id)?.handover_stage ?? "not_started"))?.label ?? STEPS.find((s) => s.key === r.step)!.label}</td>
             </tr>
           ))}
         </tbody>
@@ -118,6 +125,23 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
           <div key={s.key}><i style={{ background: s.color }} /><b>{count(s.key)}</b><small>{s.label}</small></div>
         ))}
       </section>
+
+      <section className="we-card we-stack">
+        <h2 style={{ margin: 0 }}>Handover pipeline</h2>
+        <div className="we-pipe">
+          {HANDOVER.map((h) => {
+            const n = rows.filter((r) => (stageOf.get(r.id)?.handover_stage ?? "not_started") === h.key).length;
+            return (
+              <div key={h.key} className="we-pipe__step" style={{ ["--c" as string]: h.color }}>
+                <b>{n}</b><small>{h.label}</small>
+                <i style={{ width: `${rows.length ? (n / rows.length) * 100 : 0}%` }} />
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      <ConsoleSection projectId={id} mode="handover" title="Pick units and move them through handover" height={560} />
 
       <div className="we-grid">
         <section className="we-card">
@@ -182,7 +206,7 @@ export default async function DeliveryPage({ params }: { params: Promise<{ id: s
           <h2 style={{ margin: 0 }}>How a unit moves</h2>
           <p className="we-help" style={{ margin: 0 }}>
             Construction progress comes from the <Link href={`/projects/${id}/construction`}>Construction progress</Link> tab. A unit is ready when every stage is at 100%.
-            It moves on when Customer care raises a <Link href={`/docs/handovers/new?project=${id}`}>unit handover</Link>, and counts as handed over once that handover is finished.
+            Then it moves through the handover stages above (planned to submit, consultant, snagging, QC, initial handover, client) from the unit console, or when Customer care finishes a <Link href={`/docs/handovers/new?project=${id}`}>unit handover</Link>.
           </p>
         </section>
       </div>

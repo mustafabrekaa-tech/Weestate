@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConsoleSection } from "@/components/ConsoleSection";
 import { SitePlan } from "@/components/SitePlan";
 import { acts, getMe } from "@/lib/data";
 import { getScope } from "@/lib/scope";
@@ -6,9 +7,25 @@ import type { SiteBuilding, SiteModel, SitePhase, SiteUnit, SiteZone } from "@/l
 import { createClient } from "@/lib/supabase/server";
 import { addModel, changeUnitStatus, removeModel, saveLayout, saveOutline } from "../actions";
 
-export default async function SitePage({ params }: { params: Promise<{ id: string }> }) {
+export default async function SitePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> }) {
   const { id } = await params;
+  const { view } = await searchParams;
   const supabase = await createClient();
+  const { data: pp } = await supabase.from("projects").select("plan_image").eq("id", id).maybeSingle();
+  if (pp?.plan_image && view !== "map") {
+    return (
+      <div className="we-stack">
+        <div className="we-row" style={{ justifyContent: "space-between" }}>
+          <p className="we-help" style={{ margin: 0 }}>The project in 3D, built from the masterplan. Colour it by handover, construction, sales or delivery date; click units to open them.</p>
+          <div className="we-seg we-seg--light">
+            <Link href={`/projects/${id}/site`} className="is-on">3D masterplan</Link>
+            <Link href={`/projects/${id}/site?view=map`}>Satellite map and models</Link>
+          </div>
+        </div>
+        <ConsoleSection projectId={id} mode="sales" view="3d" title="3D site" height={640} />
+      </div>
+    );
+  }
   const [me, scope] = await Promise.all([getMe(), getScope(id)]);
   const [{ data: p }, { data: phases }, { data: zones }, { data: buildings }, { data: units }, { data: models }] = await Promise.all([
     supabase.from("projects").select("lat, lng").eq("id", id).single(),
@@ -21,6 +38,15 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
   const canBuild = acts(me, ["pm", "cost_control"]);
 
   return (
+    <>
+    {pp?.plan_image && (
+      <div className="we-row" style={{ justifyContent: "flex-end", marginBottom: 8 }}>
+        <div className="we-seg we-seg--light">
+          <Link href={`/projects/${id}/site`}>3D masterplan</Link>
+          <Link href={`/projects/${id}/site?view=map`} className="is-on">Satellite map and models</Link>
+        </div>
+      </div>
+    )}
     <SitePlan
       projectId={id}
       center={p?.lat != null && p?.lng != null ? [p.lng, p.lat] : null}
@@ -43,5 +69,6 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
         <Link className="we-link" href={`/projects/${id}/structure`}>Add or change phases, zones and buildings</Link>
       )}
     </SitePlan>
+    </>
   );
 }
