@@ -174,11 +174,13 @@ export function SitePlan({
       if (cancelled || !box.current) return;
       ml.setWorkerUrl("/maplibre-gl-worker.mjs");
       const firstShape = [...layout.buildings.values()][0] ?? [...layout.units.values()][0];
+      const placedModel = models.find((m) => m.placement)?.placement;
       map = new ml.Map({
         container: box.current,
         style: STYLE,
-        center: center ?? (firstShape ? ringCenter(firstShape) : [31.35, 30.03]),
-        zoom: center || firstShape ? 17 : 10,
+        // Open on a placed 3D model first, so it is in view even when it sits away from the project pin.
+        center: placedModel ? [placedModel.lng, placedModel.lat] : center ?? (firstShape ? ringCenter(firstShape) : [31.35, 30.03]),
+        zoom: placedModel || center || firstShape ? 17 : 10,
         pitch: 58,
         bearing: -25,
         maxPitch: 80,
