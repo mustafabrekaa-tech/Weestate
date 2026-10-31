@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/data";
-import { downloadTemplate, IMPORTS, mapRows, parseCsv, parseMspXml, parseXer, templateCsv, type ImportKind } from "@/lib/imports";
+import { downloadTemplate, IMPORTS, linksFromRows, mapRows, parseCsv, parseMspXml, parseXer, templateCsv, type ImportKind } from "@/lib/imports";
 
 const CHUNK = 1000;
 
@@ -67,7 +67,15 @@ export function Importer({
         }
         saved += Number(r?.ok?.match(/\d+/)?.[0] ?? 0);
       }
-      setNote({ ok: `${saved} rows saved from ${file}.` });
+      let linked = "";
+      if (kind === "activities") {
+        const links = linksFromRows(rows);
+        if (links.length) {
+          const r = await save("activity_links", links);
+          linked = r?.error ? ` Links between activities were not saved: ${r.error}` : ` ${r?.ok ?? ""}`;
+        }
+      }
+      setNote({ ok: `${saved} rows saved from ${file}.${linked}` });
       setRows([]);
     });
   }

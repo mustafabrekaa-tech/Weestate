@@ -95,6 +95,8 @@ export const IMPORTS: Record<ImportKind, Spec> = {
       { key: "finish_date", label: "Finish", aliases: ["finish date", "planned finish", "baseline finish", "end"], type: "date", example: "2026-03-15" },
       { key: "is_milestone", label: "Milestone", aliases: [], type: "bool", example: "no" },
       { key: "weight", label: "Weight", aliases: ["budget", "cost", "weight %"], type: "number", example: 1 },
+      { key: "category", label: "Category", aliases: ["discipline", "type"], example: "Execution" },
+      { key: "predecessors", label: "Predecessors", aliases: ["predecessor", "preds", "links"], example: "A1000 FS+5, A1005 SS" },
     ],
   },
   progress: {
@@ -289,17 +291,20 @@ export function parseCsv(text: string): string[][] {
   return out;
 }
 
-// Primavera P6 .xer export: the TASK table.
+// Primavera P6 .xer export: the TASK table, with links from TASKPRED.
 export function parseXer(text: string) {
   const lines = text.split(/\r?\n/);
   let table = "", fields: string[] = [];
   const rows: Record<string, unknown>[] = [];
+  const codeOf = new Map<string, string>();
+  const preds: { task: string; pred: string; type: string; lag: number }[] = [];
   for (const line of lines) {
     const parts = line.split("\t");
     if (parts[0] === "%T") table = parts[1] ?? "";
     else if (parts[0] === "%F") fields = parts.slice(1);
     else if (parts[0] === "%R" && table === "TASK") {
       const r = Object.fromEntries(fields.map((f, i) => [f, parts[i + 1] ?? ""]));
+      codeOf.set(r.task_id!, r.task_code!);
       if (r.task_type === "TT_WBS" || r.task_type === "TT_LOE") continue;
       rows.push({
         code: r.task_code,
@@ -309,16 +314,29 @@ export function parseXer(text: string) {
         is_milestone: r.task_type === "TT_Mile" || r.task_type === "TT_FinMile",
         weight: Number(r.target_drtn_hr_cnt) || 1,
       });
+    } else if (parts[0] === "%R" && table === "TASKPRED") {
+      const r = Object.fromEntries(fields.map((f, i) => [f, parts[i + 1] ?? ""]));
+      preds.push({ task: r.task_id!, pred: r.pred_task_id!, type: (r.pred_type ?? "PR_FS").replace("PR_", ""), lag: Math.round((Number(r.lag_hr_cnt) || 0) / 8) });
     }
   }
+  const byTask = new Map<string, string[]>();
+  for (const p of preds) {
+    const succ = codeOf.get(p.task), pred = codeOf.get(p.pred);
+    if (!succ || !pred) continue;
+    byTask.set(succ, [...(byTask.get(succ) ?? []), `${pred} ${p.type}${p.lag ? (p.lag > 0 ? "+" : "") + p.lag : ""}`]);
+  }
+  for (const r of rows) if (byTask.has(r.code as string)) r.predecessors = byTask.get(r.code as string)!.join(", ");
   return rows.filter((r) => r.code && r.name);
 }
 
-// Microsoft Project XML export (File > Save as > XML).
+// Microsoft Project XML export (File > Save as > XML), with predecessor links.
 export function parseMspXml(text: string) {
   const doc = new DOMParser().parseFromString(text, "application/xml");
   const get = (el: Element, tag: string) => el.getElementsByTagName(tag)[0]?.textContent ?? "";
-  return [...doc.getElementsByTagName("Task")]
+  const tasks = [...doc.getElementsByTagName("Task")];
+  const codeOf = new Map(tasks.map((t) => [get(t, "UID"), get(t, "WBS") || get(t, "ID")]));
+  const TYPES = ["FF", "FS", "SF", "SS"];
+  return tasks
     .filter((t) => get(t, "Summary") !== "1" && get(t, "Name"))
     .map((t) => ({
       code: get(t, "WBS") || get(t, "ID"),
@@ -328,7 +346,28 @@ export function parseMspXml(text: string) {
       finish_date: toDate(get(t, "Finish")),
       is_milestone: get(t, "Milestone") === "1",
       weight: 1,
+      predecessors: [...t.getElementsByTagName("PredecessorLink")]
+        .map((l) => {
+          const pred = codeOf.get(get(l, "PredecessorUID"));
+          const lag = Math.round((Number(get(l, "LinkLag")) || 0) / 4800); // tenths of a minute, 8h days
+          return pred ? `${pred} ${TYPES[Number(get(l, "Type") || 1)] ?? "FS"}${lag ? (lag > 0 ? "+" : "") + lag : ""}` : "";
+        })
+        .filter(Boolean)
+        .join(", "),
     }));
+}
+
+// The links written in a "Predecessors" column, for every imported activity.
+export function linksFromRows(rows: Record<string, unknown>[]) {
+  const out: { pred: string; succ: string; type: string; lag: number }[] = [];
+  for (const r of rows) {
+    const text = String(r.predecessors ?? "");
+    for (const part of text.split(/[,;\n]+/).map((x) => x.trim()).filter(Boolean)) {
+      const m = part.match(/^(.+?)\s*(FS|SS|FF|SF)?\s*([+-]\s*\d+)?\s*d?$/i);
+      if (m) out.push({ pred: m[1]!.trim(), succ: String(r.code), type: (m[2] ?? "FS").toUpperCase(), lag: m[3] ? Number(m[3].replace(/\s/g, "")) : 0 });
+    }
+  }
+  return out;
 }
 
 export function templateCsv(kind: ImportKind) {

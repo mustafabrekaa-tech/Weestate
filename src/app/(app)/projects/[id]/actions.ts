@@ -180,6 +180,13 @@ export async function setUnitStatus(id: string, _: ActionResult, form: FormData)
 
 export async function importRows(id: string, kind: string, rows: Record<string, unknown>[], version?: string): Promise<ActionResult> {
   const supabase = await createClient();
+  // Links between schedule activities, sent once all activities are in.
+  if (kind === "activity_links") {
+    const { data, error } = await supabase.rpc("import_links", { p_project: id, p_links: rows });
+    if (error) return { error: error.message };
+    revalidatePath(`/projects/${id}`, "layout");
+    return { ok: `${data} links saved.` };
+  }
   const { data, error } = await supabase.rpc("import_rows", {
     p_project: id,
     p_kind: kind,
@@ -187,6 +194,12 @@ export async function importRows(id: string, kind: string, rows: Record<string, 
     p_version: version ?? null,
   });
   if (error) return { error: error.message };
+  if (kind === "activities") {
+    // Categories (engineering, execution…) aren't part of the bulk import.
+    const byCat = new Map<string, string[]>();
+    for (const r of rows) if (r.category) byCat.set(String(r.category), [...(byCat.get(String(r.category)) ?? []), String(r.code)]);
+    for (const [cat, codes] of byCat) await supabase.from("activities").update({ category: cat }).eq("project_id", id).in("code", codes);
+  }
   revalidatePath(`/projects/${id}`, "layout");
   return { ok: `${data} rows saved.` };
 }
@@ -388,4 +401,68 @@ export async function saveLayout(id: string, data: unknown): Promise<ActionResul
   const { data: n, error } = await supabase.rpc("save_layout", { p_project: id, p_data: data });
   if (error) return { error: error.message };
   return done(id, "site", `Layout saved (${n} parts). Redraw any outline from the panel when you have the real one.`);
+}
+
+// Which units a bulk form means: phase, zone, building, unit type and/or typed codes.
+async function pickUnits(supabase: Awaited<ReturnType<typeof createClient>>, id: string, form: FormData) {
+  const codes = str(form.get("codes")).split(/[\s,;]+/).filter(Boolean);
+  let q = supabase.from("units").select("id").eq("project_id", id);
+  if (str(form.get("phase_id"))) q = q.eq("phase_id", str(form.get("phase_id")));
+  if (str(form.get("zone_id"))) q = q.eq("zone_id", str(form.get("zone_id")));
+  if (str(form.get("building_id"))) q = q.eq("building_id", str(form.get("building_id")));
+  if (str(form.get("unit_type"))) q = q.eq("unit_type", str(form.get("unit_type")));
+  if (codes.length) q = q.in("code", codes);
+  const out: string[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data } = await q.range(from, from + 999);
+    out.push(...(data ?? []).map((r) => r.id as string));
+    if (!data || data.length < 1000) break;
+  }
+  return { ids: out, filtered: codes.length > 0 || ["phase_id", "zone_id", "building_id", "unit_type"].some((k) => str(form.get(k))) };
+}
+
+export async function recordConstruction(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const pctv = num(form.get("pct"));
+  if (pctv == null || Number.isNaN(pctv) || pctv < 0 || pctv > 100) return { error: "Enter a percentage between 0 and 100." };
+  const supabase = await createClient();
+  const { ids, filtered } = await pickUnits(supabase, id, form);
+  if (!filtered) return { error: "Choose which units: a phase, building, unit type or unit codes." };
+  if (!ids.length) return { error: "No units match that choice." };
+  const stages = form.getAll("stage_id").map(String).filter(Boolean);
+  if (!stages.length) return { error: "Tick at least one stage." };
+  for (const stage of stages) {
+    const { error } = await supabase.rpc("record_unit_progress", { p_project: id, p_units: ids, p_stage: stage, p_pct: pctv, p_as_of: str(form.get("as_of")) || null });
+    if (error) return { error: denied(error, "Site, the Technical office, Quality or the PM") };
+  }
+  return done(id, "construction", `Recorded ${pctv}% on ${stages.length} stage${stages.length > 1 ? "s" : ""} for ${ids.length} units.`);
+}
+
+export async function saveStages(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const ids = form.getAll("sid").map(String);
+  const names = form.getAll("sname").map(String);
+  const weights = form.getAll("sweight").map((w) => Number(w) || 0);
+  for (let i = 0; i < ids.length; i++) {
+    if (!names[i]!.trim()) continue;
+    const { error } = await supabase.from("construction_stages").update({ name: names[i]!.trim(), weight: weights[i] }).eq("id", ids[i]!);
+    if (error) return { error: denied(error, "the PM, Technical office or Cost control") };
+  }
+  const extra = str(form.get("new_name"));
+  if (extra) {
+    const { error } = await supabase.from("construction_stages").insert({ project_id: id, seq: ids.length + 1, name: extra, weight: num(form.get("new_weight")) || 5 });
+    if (error) return { error: denied(error, "the PM, Technical office or Cost control") };
+  }
+  return done(id, "construction", "Stages saved.");
+}
+
+export async function setDeliveryDates(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
+  const when = str(form.get("delivery_date"));
+  if (!when) return { error: "Pick the planned delivery date." };
+  const supabase = await createClient();
+  const { ids, filtered } = await pickUnits(supabase, id, form);
+  if (!filtered) return { error: "Choose which units: a phase, building, unit type or unit codes." };
+  if (!ids.length) return { error: "No units match that choice." };
+  const { data, error } = await supabase.rpc("set_delivery_dates", { p_project: id, p_units: ids, p_date: when });
+  if (error) return { error: error.message };
+  return done(id, "delivery", `Planned delivery set for ${data} units.`);
 }
