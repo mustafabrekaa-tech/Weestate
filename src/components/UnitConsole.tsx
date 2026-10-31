@@ -116,7 +116,7 @@ export function UnitConsole({
   const [view, setView] = useState<View>(initialView && (initialView === "tiles" || hasPlan) && (initialView !== "earth" || earth.some((p) => p.id === projectId)) ? initialView : hasPlan ? "map" : "tiles");
   const [scale, setScale] = useState(1);
   const [full, setFull] = useState(false);
-  const [side, setSide] = useState(true);
+  const [side, setSide] = useState(false);
   const [fPhase, setFPhase] = useState<Set<string>>(new Set(initial?.phase ? [initial.phase] : []));
   const [fZone, setFZone] = useState<Set<string>>(new Set(initial?.zone ? [initial.zone] : []));
   const [fType, setFType] = useState<Set<string>>(new Set());
@@ -130,6 +130,12 @@ export function UnitConsole({
     if (initialStage) return new Set(units.filter((u) => u.ho === initialStage).map((u) => u.id));
     return new Set();
   });
+  // The selection panel slides in over the map when units are picked, so the map keeps the full width.
+  const hadSel = useRef(sel.size > 0);
+  useEffect(() => {
+    if (sel.size > 0 && !hadSel.current) setSide(true);
+    hadSel.current = sel.size > 0;
+  }, [sel]);
   const [focus, setFocus] = useState<string | null>(() => {
     const exact = initialQ ? units.find((u) => u.code.toLowerCase() === initialQ.trim().toLowerCase()) : undefined;
     return exact?.id ?? null;
@@ -279,7 +285,7 @@ export function UnitConsole({
             {earth.some((p) => p.id === projectId) && <button type="button" aria-pressed={view === "earth"} className={view === "earth" ? "is-on" : ""} onClick={() => setView("earth")}>Satellite</button>}
             <button type="button" aria-pressed={view === "tiles"} className={view === "tiles" ? "is-on" : ""} onClick={() => setView("tiles")}>List</button>
           </div>
-          <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setSide((v) => !v)}>{side ? "Hide panel" : "Show panel"}</button>
+          <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setSide((v) => !v)} aria-pressed={side}>{side ? "Hide panel" : `Selection panel${sel.size ? ` (${sel.size})` : ""}`}</button>
           <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setFull((v) => !v)}>{full ? "Exit full screen" : "Full screen"}</button>
         </div>
       </div>
@@ -333,7 +339,7 @@ export function UnitConsole({
         </div>
       </div>
 
-      <div className={`we-uc__body${side ? "" : " is-wide"}`} style={{ ["--uc-h" as string]: full ? "calc(100dvh - 250px)" : `max(${height}px, calc(100dvh - 300px))` }}>
+      <div className={`we-uc__body is-wide${side ? " has-drawer" : ""}`} style={{ ["--uc-h" as string]: full ? "calc(100dvh - 250px)" : `max(${height}px, calc(100dvh - 300px))` }}>
         <div className="we-uc__stagewrap">
           <div className="we-uc__selbar">
             <label className="we-uc__multi">
@@ -383,7 +389,8 @@ export function UnitConsole({
           </div>
         </div>
 
-        {side && <aside className="we-uc__side">
+        {side && <aside className="we-uc__side we-uc__drawer">
+          <button type="button" className="we-uc__drawerx" onClick={() => setSide(false)} aria-label="Close the panel">×</button>
           <div className="we-uc__selhead">
             <div><b>{sel.size}</b> unit{sel.size === 1 ? "" : "s"} selected</div>
             <div className="we-row" style={{ gap: 6 }}>
