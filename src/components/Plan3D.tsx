@@ -67,6 +67,8 @@ export function Plan3D({ image, w, h, units, buildings, matches, sel, colorOf, o
   state.current = { matches, sel, colorOf };
   const [tip, setTip] = useState<null | { x: number; y: number; u: CUnit }>(null);
   const resetRef = useRef<() => void>(() => {});
+  const viewRef = useRef<(k: "3d" | "plan" | "south" | "east") => void>(() => {});
+  const [cam, setCam] = useState<"3d" | "plan" | "south" | "east">("3d");
   const unitsRef = useRef(new Map(units.map((u) => [u.id, u])));
   unitsRef.current = new Map(units.map((u) => [u.id, u]));
   // Rebuild the blocks only when the shapes change, not when a status does.
@@ -131,6 +133,25 @@ export function Plan3D({ image, w, h, units, buildings, matches, sel, colorOf, o
       };
       reset();
       resetRef.current = reset;
+      // Camera presets: straight down (plan), from the south or east (elevations), or the 3D angle. Glides there.
+      let tween: null | { t0: number; from: T.Vector3; to: T.Vector3; tf: T.Vector3; tt: T.Vector3 } = null;
+      viewRef.current = (k) => {
+        const to = new THREE.Vector3(), tt = new THREE.Vector3(w / 2, 0, h / 2);
+        if (k === "plan") to.set(w / 2, Math.max(w, h * 2) * 0.95, h / 2 + 1);
+        else if (k === "south") { to.set(w / 2, 45, h + w * 0.14); tt.set(w / 2, 30, h * 0.62); }
+        else if (k === "east") { to.set(w + h * 0.3, 45, h / 2); tt.set(w * 0.72, 30, h / 2); }
+        else to.set(w * 0.5, w * 0.42, h * 1.45);
+        controls.maxPolarAngle = k === "south" || k === "east" ? Math.PI / 2 : Math.PI / 2.15;
+        tween = { t0: performance.now(), from: camera.position.clone(), to, tf: controls.target.clone(), tt };
+      };
+      const step = () => {
+        if (!tween) return;
+        const k = Math.min(1, (performance.now() - tween.t0) / 700);
+        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        camera.position.lerpVectors(tween.from, tween.to, e);
+        controls.target.lerpVectors(tween.tf, tween.tt, e);
+        if (k >= 1) tween = null;
+      };
 
       const byId = { get: (id: string) => unitsRef.current.get(id) };
       const edgeMat = new THREE.LineBasicMaterial({ color: "#ffffff", transparent: true, opacity: 0.55 });
@@ -172,7 +193,7 @@ export function Plan3D({ image, w, h, units, buildings, matches, sel, colorOf, o
       paint();
 
       let frame = 0;
-      const loop = () => { frame = requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); };
+      const loop = () => { frame = requestAnimationFrame(loop); step(); controls.update(); renderer.render(scene, camera); };
       loop();
 
       const ray = new THREE.Raycaster();
@@ -244,8 +265,10 @@ export function Plan3D({ image, w, h, units, buildings, matches, sel, colorOf, o
 
   return (
     <div className="we-uc__stage we-uc__stage--3d" ref={box}>
-      <div className="we-uc__zoom">
-        <button type="button" className="we-uc__fit" onClick={() => resetRef.current()}>Reset view</button>
+      <div className="we-uc__cams" role="group" aria-label="Camera">
+        {([["3d", "3D"], ["plan", "Plan"], ["south", "Elevation S"], ["east", "Elevation E"]] as const).map(([k, l]) => (
+          <button key={k} type="button" aria-pressed={cam === k} className={cam === k ? "is-on" : ""} onClick={() => { setCam(k); viewRef.current(k); }}>{l}</button>
+        ))}
       </div>
       {tip && (
         <div className="we-uc__tip" style={{ left: tip.x + 14, top: tip.y + 12 }}>

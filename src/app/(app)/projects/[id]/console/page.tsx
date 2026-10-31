@@ -7,7 +7,7 @@ export default async function ConsolePage({ params, searchParams }: { params: Pr
   const { id } = await params;
   const { mode, view, q, stage } = await searchParams;
   const m = (["handover", "construction", "sales", "delivery"] as const).find((x) => x === mode);
-  const v = (["plan", "tiles", "3d"] as const).find((x) => x === view);
+  const v = (["map", "plan", "tiles", "3d"] as const).find((x) => x === view);
   return (
     <div className="we-stack">
       {(await ConsoleSection({ projectId: id, mode: m ?? "handover", view: v, title: "Units", height: 680, q, stage })) ?? (

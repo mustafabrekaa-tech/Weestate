@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AppNav, Icon, type IconName } from "@/components/AppNav";
 import { SECTIONS } from "@/lib/sections";
 import { MenuCloser } from "@/components/MenuCloser";
+import { NavToggle } from "@/components/NavToggle";
 import { DOC_MODULE, TAB_MODULE } from "@/lib/access";
 import { brandStyle, getBrand } from "@/lib/brand";
 import { getMe, type Department, type QueueItem, acts } from "@/lib/data";
@@ -113,6 +114,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {css ? <style>{css}</style> : null}
       <header className="we-appbar">
         <label className="we-menu-toggle we-btn we-btn--secondary we-btn--sm" htmlFor="we-menu">Menu</label>
+        <NavToggle />
         <Link href="/" className="we-appbar__home">
           {company?.logo_url ? (
             <img src={company.logo_url} alt={company.name} className="we-appbar__logo" />

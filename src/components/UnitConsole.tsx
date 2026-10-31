@@ -7,6 +7,7 @@ import { HANDOVER, HANDOVER_BY_KEY } from "@/lib/handover";
 import { UNIT_STATUS } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { ActionForm } from "./ActionForm";
+import { TileMap } from "./TileMap";
 
 const Plan3D = dynamic(() => import("./Plan3D").then((m) => m.Plan3D), {
   ssr: false,
@@ -21,7 +22,7 @@ export type CUnit = {
 export type COpt = { id: string; label: string };
 export type CBuilding = { id: string; code: string; name: string; zone: string | null; phase: string | null; floors: number };
 export type Mode = "handover" | "construction" | "sales" | "delivery";
-type View = "plan" | "tiles" | "3d";
+type View = "map" | "plan" | "tiles" | "3d";
 type Bucket = { key: string; label: string; color: string };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -101,7 +102,10 @@ export function UnitConsole({
 }) {
   const hasPlan = !!plan && units.some((u) => u.poly);
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [view, setView] = useState<View>(initialView && (initialView === "tiles" || hasPlan) ? initialView : hasPlan ? "plan" : "tiles");
+  const [view, setView] = useState<View>(initialView && (initialView === "tiles" || hasPlan) ? initialView : hasPlan ? "map" : "tiles");
+  const [scale, setScale] = useState(1);
+  const [full, setFull] = useState(false);
+  const [side, setSide] = useState(true);
   const [fPhase, setFPhase] = useState<Set<string>>(new Set(initial?.phase ? [initial.phase] : []));
   const [fZone, setFZone] = useState<Set<string>>(new Set(initial?.zone ? [initial.zone] : []));
   const [fType, setFType] = useState<Set<string>>(new Set());
@@ -241,7 +245,7 @@ export function UnitConsole({
   );
 
   return (
-    <section className="we-uc" aria-label={title}>
+    <section className={`we-uc${full ? " we-uc--full" : ""}`} aria-label={title}>
       <div className="we-uc__top">
         <div className="we-uc__title">
           <h2 className="we-section-title" style={{ margin: 0 }}>{title}</h2>
@@ -258,10 +262,13 @@ export function UnitConsole({
             ))}
           </div>
           <div className="we-seg we-seg--light" role="group" aria-label="View">
+            {hasPlan && <button type="button" aria-pressed={view === "map"} className={view === "map" ? "is-on" : ""} onClick={() => setView("map")}>Tile map</button>}
             {hasPlan && <button type="button" aria-pressed={view === "plan"} className={view === "plan" ? "is-on" : ""} onClick={() => setView("plan")}>Masterplan</button>}
             {hasPlan && <button type="button" aria-pressed={view === "3d"} className={view === "3d" ? "is-on" : ""} onClick={() => setView("3d")}>3D</button>}
-            <button type="button" aria-pressed={view === "tiles"} className={view === "tiles" ? "is-on" : ""} onClick={() => setView("tiles")}>Tiles</button>
+            <button type="button" aria-pressed={view === "tiles"} className={view === "tiles" ? "is-on" : ""} onClick={() => setView("tiles")}>List</button>
           </div>
+          <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setSide((v) => !v)}>{side ? "Hide panel" : "Show panel"}</button>
+          <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setFull((v) => !v)}>{full ? "Exit full screen" : "Full screen"}</button>
         </div>
       </div>
 
@@ -314,7 +321,7 @@ export function UnitConsole({
         </div>
       </div>
 
-      <div className="we-uc__body" style={{ ["--uc-h" as string]: `${height}px` }}>
+      <div className={`we-uc__body${side ? "" : " is-wide"}`} style={{ ["--uc-h" as string]: full ? "calc(100dvh - 250px)" : `max(${height}px, calc(100dvh - 300px))` }}>
         <div className="we-uc__stagewrap">
           <div className="we-uc__selbar">
             <label className="we-uc__multi">
@@ -324,8 +331,20 @@ export function UnitConsole({
               Select all {shown.length} shown
             </button>
             {sel.size > 0 && <button type="button" className="we-btn we-btn--ghost we-btn--sm" onClick={clear}>Clear selection</button>}
-            <span className="we-uc__hint">{view === "plan" ? "Drag to move · scroll to zoom · Shift-drag to box-select · Ctrl-click to add" : view === "3d" ? "Drag to orbit · right-drag to pan · scroll to zoom · click a unit" : "Click tiles · Ctrl-click to add · click a building name to take all of it"}</span>
+            {view === "map" && (
+              <span className="we-uc__scale" role="group" aria-label="Tile size">
+                <button type="button" onClick={() => setScale((v) => Math.max(0.4, +(v - 0.1).toFixed(2)))} aria-label="Smaller">−</button>
+                <button type="button" onClick={() => setScale(1)} title="Fit the whole site to the screen">Fit</button>
+                <button type="button" onClick={() => setScale((v) => Math.min(2.5, +(v + 0.1).toFixed(2)))} aria-label="Larger">+</button>
+              </span>
+            )}
+            <span className="we-uc__hint">{view === "map" ? "Click units · click a building or cluster name to take all of it" : view === "plan" ? "Drag to move · scroll to zoom · Shift-drag to box-select · Ctrl-click to add" : view === "3d" ? "Drag to orbit · right-drag to pan · scroll to zoom · click a unit" : "Click tiles · Ctrl-click to add · click a building name to take all of it"}</span>
           </div>
+          {view === "map" && plan && (
+            <TileMap units={units} buildings={buildings} phases={phases} zones={zones} plan={plan} matches={matches} sel={sel} colorOf={colorOf}
+              onPick={pick} onMany={selectMany} scale={scale}
+              doneKey={(u) => mode === "construction" ? u.pct >= 99.95 : mode === "sales" ? u.status !== "available" : (HANDOVER_BY_KEY[u.ho]?.i ?? 0) >= 6} />
+          )}
           {view === "plan" && plan && (
             <PlanView plan={plan} units={units} matches={matches} sel={sel} colorOf={colorOf} onPick={pick} onBox={selectMany} focus={focus} />
           )}
@@ -343,7 +362,7 @@ export function UnitConsole({
           </div>
         </div>
 
-        <aside className="we-uc__side">
+        {side && <aside className="we-uc__side">
           <div className="we-uc__selhead">
             <div><b>{sel.size}</b> unit{sel.size === 1 ? "" : "s"} selected</div>
             <div className="we-row" style={{ gap: 6 }}>
@@ -445,7 +464,7 @@ export function UnitConsole({
             </div>
           )}
           <input type="hidden" value={projectId} readOnly />
-        </aside>
+        </aside>}
       </div>
     </section>
   );

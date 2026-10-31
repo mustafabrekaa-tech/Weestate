@@ -7,7 +7,7 @@ import { type Mode, UnitConsole } from "./UnitConsole";
 
 // The unit console for one project, loaded on the server.
 export async function ConsoleSection({ projectId, mode, view, title, height, q, stage }: {
-  projectId: string; mode?: Mode; view?: "plan" | "tiles" | "3d"; title?: string; height?: number; q?: string; stage?: string;
+  projectId: string; mode?: Mode; view?: "map" | "plan" | "tiles" | "3d"; title?: string; height?: number; q?: string; stage?: string;
 }) {
   const supabase = await createClient();
   const [data, me, scope] = await Promise.all([loadConsole(supabase, projectId), getMe(), getScope(projectId)]);

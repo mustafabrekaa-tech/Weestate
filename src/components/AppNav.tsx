@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 
 type Item = { href: string; label: string; count?: number; late?: boolean; icon?: IconName };
@@ -55,10 +56,35 @@ export function AppNav({ top, project, groups }: {
       {!!i.count && <span className={`we-count${i.late ? " we-count--overdue" : ""}`}>{i.count}</span>}
     </Link>
   );
-  // Department workflows stay open; queues and admin fold away.
+  // Every section folds; what the person folded is remembered on this browser.
   const folding = new Set(["departments", "admin", "platform"]);
-  const flat = groups.filter((g) => !folding.has(g.key));
-  const folded = groups.filter((g) => folding.has(g.key));
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    try { setClosed(JSON.parse(localStorage.getItem("we-nav-folds") || "{}")); } catch {}
+  }, []);
+  const isOpen = (key: string, items: Item[]) => closed[key] !== undefined ? !closed[key] : items.some((i) => active(i.href)) || !folding.has(key);
+  const flip = (key: string, open: boolean) => setClosed((c) => {
+    const n = { ...c, [key]: open };
+    try { localStorage.setItem("we-nav-folds", JSON.stringify(n)); } catch {}
+    return n;
+  });
+  const fold = (key: string, label: string, icon: IconName, items: Item[], exactFirst = false, strong = false) => {
+    if (!items.length) return null;
+    const open = isOpen(key, items);
+    const total = items.reduce((s, i) => s + (i.count ?? 0), 0);
+    return (
+      <div key={key} className={`we-fold${open ? " is-open" : ""}${strong ? " we-fold--strong" : ""}`}>
+        <button type="button" className="we-fold__head" aria-expanded={open} onClick={() => flip(key, open)}>
+          <span className="we-nav__label"><Icon name={icon} />{label}</span>
+          {total > 0 && !open && <span className={`we-count${items.some((i) => i.late) ? " we-count--overdue" : ""}`}>{total}</span>}
+          <i className="we-fold__chev" aria-hidden="true" />
+        </button>
+        {open && <div className="we-nav__flat">{items.map((i, n) => link(i, exactFirst && n === 0))}</div>}
+      </div>
+    );
+  };
+  const work = groups.filter((g) => !folding.has(g.key) && g.items.length);
+  const admin = groups.filter((g) => folding.has(g.key) && g.items.length);
 
   return (
     <nav className="we-nav" aria-label="Main">
@@ -66,35 +92,14 @@ export function AppNav({ top, project, groups }: {
       {project && (
         <>
           <div className="we-nav__group">{project.name}</div>
-          {project.main.map((i, n) => link(i, n === 0))}
-          {project.more.length > 0 && (
-            <>
-              <div className="we-nav__sub"><Icon name="chart" />Cost, contracts and data</div>
-              <div className="we-nav__flat">{project.more.map((i) => link(i))}</div>
-            </>
-          )}
+          {fold("p-site", "Site and delivery", "build", project.main, true, true)}
+          {fold("p-more", "Cost, contracts and data", "chart", project.more, false, true)}
         </>
       )}
-      {flat.some((g) => g.items.length) && <div className="we-nav__group">Workflows</div>}
-      {flat.filter((g) => g.items.length).map((g) => (
-        <div key={g.key}>
-          <div className="we-nav__sub"><Icon name={g.icon} />{g.label}</div>
-          <div className="we-nav__flat">{g.items.map((i) => link(i))}</div>
-        </div>
-      ))}
-      {folded.filter((g) => g.items.length).map((g) => {
-        const open = g.items.some((i) => active(i.href));
-        const total = g.items.reduce((s, i) => s + (i.count ?? 0), 0);
-        return (
-          <details key={g.key} className="we-nav__section" open={open || undefined}>
-            <summary>
-              <span className="we-nav__label"><Icon name={g.icon} />{g.label}</span>
-              {total > 0 && !open && <span className={`we-count${g.items.some((i) => i.late) ? " we-count--overdue" : ""}`}>{total}</span>}
-            </summary>
-            <div className="we-nav__items">{g.items.map((i) => link(i))}</div>
-          </details>
-        );
-      })}
+      {work.length > 0 && <div className="we-nav__group">Workflows</div>}
+      {work.map((g) => fold(g.key, g.label, g.icon, g.items))}
+      {admin.length > 0 && <div className="we-nav__group">Company</div>}
+      {admin.map((g) => fold(g.key, g.label, g.icon, g.items))}
     </nav>
   );
 }
