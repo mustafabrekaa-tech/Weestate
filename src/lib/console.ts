@@ -4,6 +4,7 @@ import type { Scope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { readGeo } from "@/lib/geo";
 import type { EarthProject } from "@/components/EarthMap";
+import type { TileLayout } from "@/components/SiteTiles";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 type Row = {
@@ -21,7 +22,7 @@ export async function loadConsole(supabase: Supa, project: string) {
     fetchAll<Row>((a, b) => supabase.from("units")
       .select("id, code, unit_type, phase_id, zone_id, building_id, floor, status, handover_stage, handover_stage_at, priority, delivery_date, target_date, area_m2, plan_poly")
       .eq("project_id", project).order("code").range(a, b)),
-    supabase.from("projects").select("plan_image, plan_w, plan_h").eq("id", project).maybeSingle(),
+    supabase.from("projects").select("plan_image, plan_w, plan_h, tile_layout").eq("id", project).maybeSingle(),
     supabase.from("phases").select("id, code, name").eq("project_id", project).order("code"),
     supabase.from("zones").select("id, code, name").eq("project_id", project).order("code"),
     supabase.from("buildings").select("id, code, name, zone_id, phase_id, floors").eq("project_id", project).order("code"),
@@ -44,7 +45,9 @@ export async function loadConsole(supabase: Supa, project: string) {
     plan: x.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
     geo: readGeo(x.plan_geo),
   }));
+  const tileLayout = (p?.tile_layout as TileLayout | null) ?? null;
   return {
+    tileLayout: tileLayout?.regions?.length ? tileLayout : null,
     earth,
     units,
     stagePct,

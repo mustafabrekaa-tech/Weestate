@@ -121,21 +121,28 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
     }
   }
 
-  const unitTable = (list: typeof rows, empty: string) => (
-    <div className="we-table-wrap" style={{ maxHeight: 360 }}>
-      <table className="we-table">
-        <thead><tr><th>Unit</th><th>Phase</th><th>Planned delivery</th><th>Construction</th><th>Handover stage</th></tr></thead>
+  const phaseCode = (v: string | null) => (phases ?? []).find((p) => p.id === v)?.code || "–";
+  const days = (d: string | null) => (d ? Math.round((Date.parse(d) - Date.parse(today)) / 86400000) : null);
+  const unitTable = (list: typeof rows, empty: string, lateMode: boolean) => (
+    <div className="we-table-wrap" style={{ maxHeight: 420 }}>
+      <table className="we-table we-table--compact">
+        <thead><tr><th>Unit</th><th>Phase</th><th>Planned delivery</th><th className="num">{lateMode ? "Days late" : "Days left"}</th><th>Construction</th><th>Handover stage</th><th /></tr></thead>
         <tbody>
-          {list.length === 0 && <tr><td colSpan={5} className="we-empty">{empty}</td></tr>}
-          {list.slice(0, 200).map((r) => (
-            <tr key={r.id}>
-              <td><span className="we-code">{r.code}</span> <span className="we-meta">{r.unit_type}</span></td>
-              <td>{phaseName(r.phase_id)}</td>
-              <td>{date(r.delivery_date)}</td>
-              <td><div className="we-row" style={{ gap: 8, flexWrap: "nowrap" }}><div className="we-prog" style={{ flex: 1 }}><span style={{ width: `${r.pct}%` }} /></div>{Math.round(r.pct)}%</div></td>
-              <td>{HANDOVER.find((h) => h.key === (stageOf.get(r.id)?.handover_stage ?? "not_started"))?.label ?? STEPS.find((s) => s.key === r.step)!.label}</td>
-            </tr>
-          ))}
+          {list.length === 0 && <tr><td colSpan={7} className="we-empty">{empty}</td></tr>}
+          {list.slice(0, 200).map((r) => {
+            const d = days(r.delivery_date);
+            return (
+              <tr key={r.id}>
+                <td style={{ whiteSpace: "nowrap" }}><span className="we-code">{r.code}</span> <span className="we-meta">{r.unit_type}</span></td>
+                <td title={phaseName(r.phase_id)} style={{ whiteSpace: "nowrap" }}>{phaseCode(r.phase_id)}</td>
+                <td style={{ whiteSpace: "nowrap" }}>{date(r.delivery_date)}</td>
+                <td className={`num${lateMode ? " is-bad" : ""}`}>{d == null ? "–" : Math.abs(d)}</td>
+                <td style={{ minWidth: 140 }}><div className="we-row" style={{ gap: 8, flexWrap: "nowrap" }}><div className="we-prog" style={{ flex: 1 }}><span style={{ width: `${r.pct}%` }} /></div>{Math.round(r.pct)}%</div></td>
+                <td style={{ whiteSpace: "nowrap" }}>{HANDOVER.find((h) => h.key === (stageOf.get(r.id)?.handover_stage ?? "not_started"))?.label ?? STEPS.find((s) => s.key === r.step)!.label}</td>
+                <td style={{ textAlign: "right", whiteSpace: "nowrap" }}><Link className="we-link" href={`${base}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -241,16 +248,14 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
         </section>
       </div>
 
-      <div className="we-grid">
-        <section className="we-card we-stack">
-          <h2 style={{ margin: 0 }}>Late units <small>{late.length}</small></h2>
-          {unitTable(late, "Nothing late.")}
-        </section>
-        <section className="we-card we-stack">
-          <h2 style={{ margin: 0 }}>Due in the next 90 days <small>{soon.length}</small></h2>
-          {unitTable(soon, "Nothing due in the next 90 days.")}
-        </section>
-      </div>
+      <section className="we-panel">
+        <div className="we-panel__head"><h2>Late units</h2><small>{late.length} past the contract date{late.length > 200 ? " · first 200" : ""}</small></div>
+        {unitTable(late, "Nothing late.", true)}
+      </section>
+      <section className="we-panel">
+        <div className="we-panel__head"><h2>Due in the next 90 days</h2><small>{soon.length} units{soon.length > 200 ? " · first 200" : ""}</small></div>
+        {unitTable(soon, "Nothing due in the next 90 days.", false)}
+      </section>
 
       <div className="we-grid">
         {canPlan && (

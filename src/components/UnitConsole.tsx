@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ActionForm } from "./ActionForm";
 import type { EarthProject } from "./EarthMap";
 import type { PlanGeo } from "@/lib/geo";
+import { SiteTiles, type TileLayout } from "./SiteTiles";
 import { TileMap } from "./TileMap";
 
 const EarthMap = dynamic(() => import("./EarthMap").then((m) => m.EarthMap), {
@@ -82,8 +83,9 @@ function toggle<T>(set: Set<T>, v: T) {
 
 export function UnitConsole({
   projectId, units, phases, zones, buildings, stages, stagePct, plan, initialMode = "handover", initialView,
-  can, actions, title = "Unit console", height = 620, initial, initialQ = "", initialStage, earth = [], saveGeo,
+  can, actions, title = "Unit console", height = 620, initial, initialQ = "", initialStage, earth = [], saveGeo, tileLayout,
 }: {
+  tileLayout?: TileLayout | null;
   earth?: EarthProject[];
   saveGeo?: (g: PlanGeo) => Promise<ActionResult>;
   projectId: string;
@@ -350,7 +352,12 @@ export function UnitConsole({
             )}
             <span className="we-uc__hint">{view === "map" ? "Click units · click a building or cluster name to take all of it" : view === "plan" ? "Drag to move · scroll to zoom · Shift-drag to box-select · Ctrl-click to add" : view === "3d" ? "Drag to orbit · right-drag to pan · scroll to zoom · click a unit" : view === "earth" ? "Units on the satellite · Ctrl-drag to tilt · click a unit · project names fly there" : "Click tiles · Ctrl-click to add · click a building name to take all of it"}</span>
           </div>
-          {view === "map" && plan && (
+          {view === "map" && plan && tileLayout && (
+            <SiteTiles layout={tileLayout} units={units} buildings={buildings} matches={matches} sel={sel} colorOf={colorOf}
+              onPick={pick} onMany={selectMany} scale={scale}
+              doneKey={(u) => mode === "construction" ? u.pct >= 99.95 : mode === "sales" ? u.status !== "available" : (HANDOVER_BY_KEY[u.ho]?.i ?? 0) >= 6} />
+          )}
+          {view === "map" && plan && !tileLayout && (
             <TileMap units={units} buildings={buildings} phases={phases} zones={zones} plan={plan} matches={matches} sel={sel} colorOf={colorOf}
               onPick={pick} onMany={selectMany} scale={scale}
               doneKey={(u) => mode === "construction" ? u.pct >= 99.95 : mode === "sales" ? u.status !== "available" : (HANDOVER_BY_KEY[u.ho]?.i ?? 0) >= 6} />
