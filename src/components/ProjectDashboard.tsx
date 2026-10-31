@@ -142,9 +142,9 @@ export async function ProjectDashboard({ id, me, greeting }: { id: string; me: P
 
       <section className="we-panel we-span-4">
         <div className="we-panel__head"><h2>Handover</h2><Link className="we-link" href={`${base}/delivery`}>Pipeline</Link></div>
-        <div className="we-row" style={{ alignItems: "center", flexWrap: "nowrap", gap: 16 }}>
+        <div className="we-donutbox">
           <Donut label="Units by handover stage" parts={HANDOVER.map((h) => ({ label: h.label, value: n(h.key), color: h.color }))} />
-          <ul className="we-legendlist" style={{ flex: 1, minWidth: 0 }}>
+          <ul className="we-legendlist we-legendlist--two">
             {HANDOVER.filter((h) => n(h.key)).map((h) => (
               <li key={h.key}><Link href={`${base}/delivery?stage=${h.key}`}><i style={{ background: h.color }} />{h.short}<b>{n(h.key)}</b></Link></li>
             ))}

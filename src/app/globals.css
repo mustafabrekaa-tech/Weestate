@@ -1139,3 +1139,14 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
 .we-site__u.is-off { background: #eceae5; color: #b3b8bd; cursor: default; text-shadow: none; }
 .we-table--compact th, .we-table--compact td { padding-top: 8px; padding-bottom: 8px; }
 .we-table--compact td { font-size: 13.5px; }
+.we-donutbox { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 16px; align-items: center; }
+.we-legendlist li a, .we-legendlist li > span { white-space: nowrap; }
+.we-legendlist--two { grid-template-columns: 1fr; }
+.we-panel__head { flex-wrap: wrap; gap: 4px 12px; }
+.we-panel__head > a { white-space: nowrap; }
+@media (max-width: 1500px) {
+  .we-donutbox { grid-template-columns: 1fr; justify-items: center; }
+  .we-donutbox .we-legendlist { width: 100%; }
+}
+.we-legendlist a { min-width: 0; }
+.we-panel { min-width: 0; }
