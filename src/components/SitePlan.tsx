@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/data";
 import { autoLayout } from "@/lib/layout";
-import { UNIT_STATUS, type SiteBuilding, type SiteModel, type SitePhase, type SiteUnit, type SiteZone } from "@/lib/site";
+import { UNIT_STATUS, type ModelPlacement, type SiteBuilding, type SiteModel, type SitePhase, type SiteUnit, type SiteZone } from "@/lib/site";
+import { addModelLayer } from "./MapModels";
 import { ModelViewer } from "./ModelViewer";
 import { Select } from "@/components/Select";
 
@@ -44,8 +45,9 @@ const ringCenter = (r: [number, number][]) =>
 // draw outlines straight on the map.
 export function SitePlan({
   projectId, center, phases, zones, buildings, units, models, canDraw, canSell, canBuild, initial,
-  saveOutline, saveLayout, changeStatus, addModel, removeModel, children,
+  saveOutline, saveLayout, changeStatus, addModel, removeModel, placeModel, children,
 }: {
+  placeModel?: (model: string, placement: ModelPlacement | null) => Promise<ActionResult>;
   projectId: string;
   center: [number, number] | null;
   phases: SitePhase[];
@@ -78,6 +80,12 @@ export function SitePlan({
   const [pending, start] = useTransition();
   const drawRef = useRef<Draw>(null);
   drawRef.current = draw;
+  // Placing a 3D model: it stands at the centre of the map while the map is dragged under it.
+  const [placing, setPlacing] = useState<{ id: string; p: ModelPlacement } | null>(null);
+  const placingRef = useRef(placing);
+  placingRef.current = placing;
+  const [showBlocks, setShowBlocks] = useState(true);
+  const modelsCtl = useRef<{ set: (l: { id: string; url: string; placement: ModelPlacement }[]) => void } | null>(null);
 
   // Anything not drawn yet gets a suggested place, so every unit shows up in 3D.
   const layout = useMemo(
@@ -205,10 +213,17 @@ export function SitePlan({
         map!.addLayer({ id: "sketch-fill", type: "fill", source: "sketch", filter: ["==", "$type", "Polygon"], paint: { "fill-color": "#ffffff", "fill-opacity": 0.25 } });
         map!.addLayer({ id: "sketch-line", type: "line", source: "sketch", paint: { "line-color": "#ffffff", "line-width": 2.5 } });
         map!.addLayer({ id: "sketch-pts", type: "circle", source: "sketch", filter: ["==", "$type", "Point"], paint: { "circle-radius": 5, "circle-color": "#c9a24e", "circle-stroke-color": "#fff", "circle-stroke-width": 2 } });
-        setReady(true);
+        addModelLayer(map!, []).then((c) => { modelsCtl.current = c; setReady(true); }).catch(() => setReady(true));
       });
 
+      map.on("move", () => {
+        const pl = placingRef.current;
+        if (!pl) return;
+        const c = map!.getCenter();
+        setPlacing({ id: pl.id, p: { ...pl.p, lng: c.lng, lat: c.lat } });
+      });
       map.on("click", (e) => {
+        if (placingRef.current) return;
         const d = drawRef.current;
         if (d) {
           setDraw({ ...d, points: [...d.points, [e.lngLat.lng, e.lngLat.lat]] });
@@ -250,6 +265,37 @@ export function SitePlan({
       if (on) map.setFeatureState({ source: "solids", id: f.id! }, { picked: true });
     }
   }, [data, pick, ready]);
+
+  // 3D models on the map: saved ones where they were placed, the one being placed where it is now.
+  useEffect(() => {
+    if (!ready || !modelsCtl.current) return;
+    const list = models
+      .map((m) => ({ id: m.id, url: m.url, placement: placing?.id === m.id ? placing.p : m.placement ?? null }))
+      .filter((m): m is { id: string; url: string; placement: ModelPlacement } => !!m.placement);
+    modelsCtl.current.set(list);
+  }, [models, placing, ready]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !map.getLayer("solids")) return;
+    map.setLayoutProperty("solids", "visibility", showBlocks ? "visible" : "none");
+  }, [showBlocks, ready]);
+
+  function startPlacing(m: SiteModel) {
+    const map = mapRef.current;
+    if (!map) return;
+    setPick(null);
+    setDraw(null);
+    const c = map.getCenter();
+    const p = m.placement ?? { lng: c.lng, lat: c.lat, rot: 0, scale: 1, alt: 0 };
+    if (m.placement) map.jumpTo({ center: [p.lng, p.lat] });
+    setPlacing({ id: m.id, p });
+  }
+  function savePlacing() {
+    if (!placing || !placeModel) return;
+    const pl = placing;
+    setPlacing(null);
+    run(() => placeModel(pl.id, pl.p));
+  }
 
   // The outline being drawn.
   useEffect(() => {
@@ -369,6 +415,23 @@ export function SitePlan({
                   </div>
                 </div>
               )}
+              {placing && (
+                <>
+                  <div className="we-map__cross" aria-hidden="true" />
+                  <div className="we-earth__align we-map__place">
+                    <b>Place {models.find((m) => m.id === placing.id)?.name ?? "the model"} on the map</b>
+                    <p className="we-help">Drag the map to move the model: it stands on the cross. Turn and size it until it sits on its plot.</p>
+                    <label>Turn <input type="range" min={-180} max={180} step={0.5} value={placing.p.rot} onChange={(e) => setPlacing({ ...placing, p: { ...placing.p, rot: +e.target.value } })} /> <span>{placing.p.rot.toFixed(1)}°</span></label>
+                    <label>Size <input type="range" min={-2} max={2} step={0.01} value={Math.log10(placing.p.scale)} onChange={(e) => setPlacing({ ...placing, p: { ...placing.p, scale: +Math.pow(10, +e.target.value).toFixed(3) } })} /> <span>×{placing.p.scale.toFixed(2)}</span></label>
+                    <label>Height <input type="range" min={-20} max={60} step={0.5} value={placing.p.alt} onChange={(e) => setPlacing({ ...placing, p: { ...placing.p, alt: +e.target.value } })} /> <span>{placing.p.alt.toFixed(1)} m</span></label>
+                    <label className="we-row" style={{ gap: 6 }}><input type="checkbox" checked={showBlocks} onChange={(e) => setShowBlocks(e.target.checked)} /> Show the coloured blocks</label>
+                    <div className="we-row">
+                      <button type="button" className="we-btn we-btn--primary we-btn--sm" onClick={savePlacing} disabled={pending}>Save position</button>
+                      <button type="button" className="we-btn we-btn--ghost we-btn--sm" onClick={() => setPlacing(null)}>Cancel</button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
             <ModelViewer
@@ -478,6 +541,25 @@ export function SitePlan({
                     <span className="we-help">{missing.phases} phases and {missing.buildings} buildings have no outline yet.</span>
                   )}
                   <DrawPicker phases={phases} buildings={buildings} onStart={(kind, id) => { setPick(null); setDraw({ kind, id, points: [] }); }} />
+                </div>
+              )}
+              {models.length > 0 && (
+                <div className="we-stack" style={{ gap: 8 }}>
+                  <h3 className="we-h3">3D models on the map</h3>
+                  {models.map((m) => (
+                    <div key={m.id} className="we-row" style={{ justifyContent: "space-between", gap: 6 }}>
+                      <span>{m.name}{m.placement ? " ✓" : ""}</span>
+                      {canDraw && placeModel && (
+                        <span className="we-row" style={{ gap: 8 }}>
+                          <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => startPlacing(m)}>{m.placement ? "Move" : "Place on the map"}</button>
+                          {m.placement && <button type="button" className="we-link" onClick={() => run(() => placeModel(m.id, null))}>Take off</button>}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  {models.some((m) => m.placement) && (
+                    <label className="we-row" style={{ gap: 6, fontSize: 13 }}><input type="checkbox" checked={showBlocks} onChange={(e) => setShowBlocks(e.target.checked)} /> Show the coloured blocks</label>
+                  )}
                 </div>
               )}
               {children}

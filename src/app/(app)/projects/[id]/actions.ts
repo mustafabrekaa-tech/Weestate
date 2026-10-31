@@ -317,6 +317,18 @@ export async function removeModel(id: string, model: string): Promise<ActionResu
   return done(id, "site", "Model removed.");
 }
 
+// Where a 3D model stands on the satellite map. RLS keeps it to the departments that add models.
+export async function placeModel(id: string, model: string, placement: { lng: number; lat: number; rot: number; scale: number; alt: number } | null): Promise<ActionResult> {
+  const ok = (n: unknown, lo: number, hi: number) => typeof n === "number" && Number.isFinite(n) && n >= lo && n <= hi;
+  if (placement && !(ok(placement.lng, -180, 180) && ok(placement.lat, -85, 85) && ok(placement.rot, -360, 360) && ok(placement.scale, 0.001, 1000) && ok(placement.alt, -500, 500)))
+    return { error: "That position is not valid." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("project_models").update({ placement }).eq("id", model).eq("project_id", id).select("id");
+  if (error) return { error: denied(error, "PM, Technical office, Cost control or Sales") };
+  if (!data?.length) return { error: "Only PM, Technical office, Cost control or Sales can place models." };
+  return done(id, "site", placement ? "Model position saved." : "Model taken off the map.");
+}
+
 // Phases, zones and buildings ---------------------------------------------------------------------
 export async function saveZone(id: string, _: ActionResult, form: FormData): Promise<ActionResult> {
   const supabase = await createClient();

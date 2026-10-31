@@ -6,7 +6,7 @@ import { acts, getMe } from "@/lib/data";
 import { getScope } from "@/lib/scope";
 import type { SiteBuilding, SiteModel, SitePhase, SiteUnit, SiteZone } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
-import { addModel, changeUnitStatus, removeModel, saveLayout, saveOutline } from "../actions";
+import { addModel, changeUnitStatus, placeModel, removeModel, saveLayout, saveOutline } from "../actions";
 
 export default async function SitePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ view?: string }> }) {
   const { id } = await params;
@@ -35,7 +35,7 @@ export default async function SitePage({ params, searchParams }: { params: Promi
     supabase.from("zones").select("id, code, name, phase_id, boundary").eq("project_id", id).order("code"),
     supabase.from("buildings").select("id, code, name, phase_id, zone_id, floors, floor_height_m, base_m, footprint").eq("project_id", id).order("code"),
     supabase.from("units").select("id, code, building_id, phase_id, zone_id, floor, status, unit_type, area_m2, garden_m2, bedrooms, list_price_egp, footprint").eq("project_id", id).order("code").limit(10000),
-    supabase.from("project_models").select("id, name, url").eq("project_id", id).order("created_at"),
+    supabase.from("project_models").select("id, name, url, placement").eq("project_id", id).order("created_at"),
   ]);
   const canBuild = acts(me, ["pm", "cost_control"]);
 
@@ -66,6 +66,7 @@ export default async function SitePage({ params, searchParams }: { params: Promi
       changeStatus={changeUnitStatus.bind(null, id)}
       addModel={addModel.bind(null, id)}
       removeModel={removeModel.bind(null, id)}
+      placeModel={placeModel.bind(null, id)}
     >
       {canBuild && (
         <Link className="we-link" href={`${base}/structure`}>Add or change phases, zones and buildings</Link>

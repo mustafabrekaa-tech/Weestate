@@ -10,7 +10,8 @@ export type SiteUnit = {
   unit_type: string; area_m2: number | null; garden_m2: number | null; bedrooms: number | null; list_price_egp: number | null;
   footprint: [number, number][] | null;
 };
-export type SiteModel = { id: string; name: string; url: string };
+export type ModelPlacement = { lng: number; lat: number; rot: number; scale: number; alt: number };
+export type SiteModel = { id: string; name: string; url: string; placement?: ModelPlacement | null };
 
 export const UNIT_STATUS: Record<string, { label: string; color: string }> = {
   available: { label: "Available", color: "#3f9a68" },
