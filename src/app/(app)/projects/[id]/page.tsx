@@ -4,7 +4,9 @@ import type { ProjectStatus } from "@/components/Kpis";
 import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
 import { SCurve, type CurvePoint } from "@/components/SCurve";
-import { SiteMap } from "@/components/SiteMap";
+import { EarthMap, type EarthProject } from "@/components/EarthMap";
+import { readGeo } from "@/lib/geo";
+import type { ModelPlacement } from "@/lib/site";
 import { getMe, sortQueue, type QueueItem } from "@/lib/data";
 import { date, money, pct } from "@/lib/format";
 import { getScope, scoped } from "@/lib/scope";
@@ -28,7 +30,11 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
     supabase.rpc("setup_checklist", { p_project: id }),
     scoped(supabase.from("units").select("status, list_price_egp, area_m2").eq("project_id", id).limit(20000), scope, { zone: true, building: true }),
   ]);
-  const { data: facts } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
+  const [{ data: facts }, { data: blds }, { data: mods }] = await Promise.all([
+    supabase.from("projects").select("*").eq("id", id).maybeSingle(),
+    supabase.from("buildings").select("footprint, floors, floor_height_m, base_m").eq("project_id", id).not("footprint", "is", null).limit(5000),
+    supabase.from("project_models").select("id, url, placement").eq("project_id", id).not("placement", "is", null),
+  ]);
   if (!p) return null;
   const project = p as ProjectStatus;
   const ph = ((phases ?? []) as Phase[]).filter((x) => !scope.phase || x.id === scope.phase);
@@ -58,6 +64,18 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
     }
     return { period, planned, actual };
   });
+
+  // The site on the satellite map, with its buildings and placed 3D models.
+  const earth: EarthProject[] = project.lat != null && project.lng != null ? [{
+    id, name: project.name, lat: project.lat, lng: project.lng, href: `${base}/console?view=earth`,
+    plan: facts?.plan_image && facts.plan_w && facts.plan_h ? { image: facts.plan_image, w: Number(facts.plan_w), h: Number(facts.plan_h) } : null,
+    geo: readGeo(facts?.plan_geo),
+    blocks: ((blds ?? []) as { footprint: [number, number][]; floors: number | null; floor_height_m: number | null; base_m: number | null }[]).map((b) => {
+      const b0 = Number(b.base_m ?? 0);
+      return { ring: b.footprint, base: b0, top: b0 + Math.max(1, b.floors ?? 1) * Number(b.floor_height_m || 3.2) };
+    }),
+    models: ((mods ?? []) as { id: string; url: string; placement: ModelPlacement }[]).map((m) => ({ id: m.id, url: m.url, placement: m.placement })),
+  }] : [];
 
   return (
     <>
@@ -107,7 +125,7 @@ export default async function ProjectOverview({ params }: { params: Promise<{ id
         <section className="we-card we-stack">
           <h2 style={{ margin: 0 }}>Site</h2>
           {project.lat != null && project.lng != null ? (
-            <SiteMap pins={[{ id, lat: project.lat, lng: project.lng, label: project.name }]} zoom={project.map_zoom} height={380} />
+            <EarthMap projects={earth} focusId={id} height={460} />
           ) : (
             <div className="we-empty">Not on the map yet. <Link href={`${base}/settings`}>Place it</Link>.</div>
           )}
