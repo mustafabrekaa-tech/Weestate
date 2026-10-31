@@ -82,7 +82,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
             <h2>On the map</h2>
             <small>{list.length} project{list.length === 1 ? "" : "s"} · click a name to fly there · <Link href={`${at(focus!.id)}/console?view=earth`}>open with units</Link></small>
           </div>
-          <EarthMap projects={earth} height={520} />
+          <EarthMap key={focus!.id} projects={earth} focusId={focus!.id} height={520} />
         </section>
       )}
 

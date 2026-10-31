@@ -88,8 +88,11 @@ export function EarthMap({
       map = new ml.Map({
         container: box.current,
         style: { ...STYLE, projection: { type: "mercator" } },
-        center: start ? [start.lng, start.lat] : [31.35, 30.03],
-        zoom: focus ? 16 : 9,
+        // Open on the project's 3D model when it has one, so it is in view.
+        center: focus?.models?.[0] ? [focus.models[0].placement.lng, focus.models[0].placement.lat] : start ? [start.lng, start.lat] : [31.35, 30.03],
+        zoom: focus ? 16.5 : 9,
+        // Tilt the view when the project has buildings or a 3D model to show.
+        pitch: focus && ((focus.blocks?.length ?? 0) > 0 || (focus.models?.length ?? 0) > 0) ? 55 : 0,
         maxPitch: 80,
         attributionControl: { compact: true },
       });
