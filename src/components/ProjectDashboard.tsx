@@ -27,18 +27,21 @@ const NEXT_BY: Record<string, string> = {
 
 // Everything a project dashboard shows, from one round of queries.
 export async function loadDash(supabase: Supa, id: string) {
-  const [{ data: p }, { data: phases }, { data: progress }, units, { data: log }, { data: queue }] = await Promise.all([
+  const [{ data: p }, { data: phases }, { data: progress }, units, { data: log }, { data: queue }, { data: phaseNow }] = await Promise.all([
     supabase.from("project_status").select("*").eq("id", id).maybeSingle(),
     supabase.from("phases").select("id, code, name, budget_egp, finish_date").eq("project_id", id).order("code"),
     supabase.from("progress_updates").select("phase_id, period, planned_pct, actual_pct").eq("project_id", id).order("period"),
     fetchAll<U>((a, b) => supabase.from("units").select("id, phase_id, handover_stage, handover_stage_at, delivery_date, status").eq("project_id", id).range(a, b)),
     supabase.from("unit_stage_log").select("stage, at, note, created_at, units(code)").eq("project_id", id).order("at", { ascending: false }).order("created_at", { ascending: false }).limit(8),
     supabase.from("work_queue").select("*").eq("project_id", id),
+    supabase.from("phase_status").select("id, as_of, planned_pct, actual_pct").eq("project_id", id),
   ]);
   return {
     p: p as ProjectStatus | null,
     phases: (phases ?? []) as Phase[],
     progress: (progress ?? []) as Progress[],
+    // Where each phase stands now, also from the imported schedule when there are no monthly updates.
+    phaseNow: (phaseNow ?? []) as { id: string; as_of: string | null; planned_pct: number; actual_pct: number }[],
     units,
     log: (log ?? []) as unknown as Log[],
     queue: sortQueue((queue ?? []) as QueueItem[]),
@@ -56,6 +59,9 @@ export async function ProjectDashboard({ id, me, greeting }: { id: string; me: P
   // Progress per phase (latest) and the project curve weighted by phase budget.
   const latest = new Map<string, Progress>();
   for (const r of d.progress) latest.set(r.phase_id, r);
+  for (const s of d.phaseNow) {
+    if (!latest.has(s.id) && s.as_of) latest.set(s.id, { phase_id: s.id, period: s.as_of, planned_pct: Number(s.planned_pct), actual_pct: Number(s.actual_pct) });
+  }
   const weight = new Map(d.phases.map((x) => [x.id, Number(x.budget_egp) || 1]));
   const totalW = [...weight.values()].reduce((a, b) => a + b, 0) || 1;
   const periods = [...new Set(d.progress.map((r) => r.period))].sort();
@@ -192,8 +198,8 @@ export async function ProjectDashboard({ id, me, greeting }: { id: string; me: P
         {p.budget_egp != null && (
           <Link className="we-kcard" href={`${base}/budget`}>
             <span className="we-kcard__label">Budget (EGP)</span>
-            <span className="we-kcard__value">{money(Number(p.budget_egp) / 1e6)}M</span>
-            <span className="we-kcard__note">spent {p.ac_egp != null ? `${money(Number(p.ac_egp) / 1e6)}M` : "–"}</span>
+            <span className="we-kcard__value">{money((Number(p.bac_egp) || Number(p.budget_egp)) / 1e6)}M</span>
+            <span className="we-kcard__note">spent {p.ac_egp != null ? `${money(Number(p.ac_egp) / 1e6)}M` : "–"}{Number(p.bac_egp) > 0 && Math.abs(Number(p.bac_egp) - Number(p.budget_egp)) > 1 ? ` · headline ${money(Number(p.budget_egp) / 1e6)}M` : ""}</span>
           </Link>
         )}
       </div>
