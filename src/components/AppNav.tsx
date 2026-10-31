@@ -55,7 +55,10 @@ export function AppNav({ top, project, groups }: {
       {!!i.count && <span className={`we-count${i.late ? " we-count--overdue" : ""}`}>{i.count}</span>}
     </Link>
   );
-  const moreOpen = project?.more.some((i) => active(i.href));
+  // Department workflows stay open; queues and admin fold away.
+  const folding = new Set(["departments", "admin", "platform"]);
+  const flat = groups.filter((g) => !folding.has(g.key));
+  const folded = groups.filter((g) => folding.has(g.key));
 
   return (
     <nav className="we-nav" aria-label="Main">
@@ -65,15 +68,21 @@ export function AppNav({ top, project, groups }: {
           <div className="we-nav__group">{project.name}</div>
           {project.main.map((i, n) => link(i, n === 0))}
           {project.more.length > 0 && (
-            <details className="we-nav__section" open={moreOpen || undefined}>
-              <summary><span className="we-nav__label"><Icon name="chart" />Cost, contracts and data</span></summary>
-              <div className="we-nav__items">{project.more.map((i) => link(i))}</div>
-            </details>
+            <>
+              <div className="we-nav__sub"><Icon name="chart" />Cost, contracts and data</div>
+              <div className="we-nav__flat">{project.more.map((i) => link(i))}</div>
+            </>
           )}
         </>
       )}
-      {groups.some((g) => g.items.length) && <div className="we-nav__group">Workflows</div>}
-      {groups.filter((g) => g.items.length).map((g) => {
+      {flat.some((g) => g.items.length) && <div className="we-nav__group">Workflows</div>}
+      {flat.filter((g) => g.items.length).map((g) => (
+        <div key={g.key}>
+          <div className="we-nav__sub"><Icon name={g.icon} />{g.label}</div>
+          <div className="we-nav__flat">{g.items.map((i) => link(i))}</div>
+        </div>
+      ))}
+      {folded.filter((g) => g.items.length).map((g) => {
         const open = g.items.some((i) => active(i.href));
         const total = g.items.reduce((s, i) => s + (i.count ?? 0), 0);
         return (

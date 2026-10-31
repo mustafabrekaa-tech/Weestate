@@ -278,28 +278,39 @@ export function UnitConsole({
       </div>
 
       <div className="we-uc__filters">
-        <div className="we-uc__frow">
-          <span className="we-uc__flabel">Phase</span>
-          {phases.map((p) => chip(fPhase.has(p.id), p.label, () => { setFPhase((s) => toggle(s, p.id)); setFZone(new Set()); }, p.id))}
-        </div>
-        {zonesShown.length > 1 && (
-          <div className="we-uc__frow">
-            <span className="we-uc__flabel">Cluster</span>
-            {zonesShown.map((z) => chip(fZone.has(z.id), z.label.replace(/^Cluster /, ""), () => setFZone((s) => toggle(s, z.id)), z.id))}
-          </div>
-        )}
-        {types.length > 1 && (
-          <div className="we-uc__frow">
-            <span className="we-uc__flabel">Type</span>
-            {types.map((t) => chip(fType.has(t), t, () => setFType((s) => toggle(s, t)), t))}
-          </div>
-        )}
-        <div className="we-uc__frow">
-          <span className="we-uc__flabel">{MODE_LABEL[mode]}</span>
-          {buckets.filter((b) => counts.get(b.key)).map((b) => chip(fBucket.has(b.key), b.label, () => setFBucket((s) => toggle(s, b.key)), b.key, b.color, counts.get(b.key)))}
+        <div className="we-uc__toolbar">
+          <label className="we-uc__sel">
+            <span>Phase</span>
+            <select value={[...fPhase][0] ?? ""} onChange={(e) => { setFPhase(new Set(e.target.value ? [e.target.value] : [])); setFZone(new Set()); }}>
+              <option value="">All phases</option>
+              {phases.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
+          </label>
+          {zonesShown.length > 1 && (
+            <label className="we-uc__sel">
+              <span>Cluster</span>
+              <select value={[...fZone][0] ?? ""} onChange={(e) => setFZone(new Set(e.target.value ? [e.target.value] : []))}>
+                <option value="">All clusters</option>
+                {zonesShown.map((z) => <option key={z.id} value={z.id}>{z.label}</option>)}
+              </select>
+            </label>
+          )}
+          {types.length > 1 && (
+            <label className="we-uc__sel">
+              <span>Type</span>
+              <select value={[...fType][0] ?? ""} onChange={(e) => setFType(new Set(e.target.value ? [e.target.value] : []))}>
+                <option value="">All types</option>
+                {types.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </label>
+          )}
           {(fPhase.size + fZone.size + fType.size + fBucket.size > 0 || prioOnly || q) && (
             <button type="button" className="we-link we-uc__reset" onClick={resetFilters}>Clear filters</button>
           )}
+        </div>
+        <div className="we-uc__frow">
+          <span className="we-uc__flabel">{MODE_LABEL[mode]}</span>
+          {buckets.filter((b) => counts.get(b.key)).map((b) => chip(fBucket.has(b.key), b.label, () => setFBucket((s) => toggle(s, b.key)), b.key, b.color, counts.get(b.key)))}
         </div>
       </div>
 

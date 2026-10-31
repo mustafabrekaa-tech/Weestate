@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
@@ -13,7 +14,7 @@ export type Scope = {
 
 export const scopeCookie = (projectId: string) => `we-scope-${projectId}`;
 
-export async function getScope(projectId: string): Promise<Scope> {
+export const getScope = cache(async function getScope(projectId: string): Promise<Scope> {
   const none: Scope = { phase: "", zone: "", building: "", buildings: [], label: "" };
   const raw = (await cookies()).get(scopeCookie(projectId))?.value;
   if (!raw) return none;
@@ -34,7 +35,7 @@ export async function getScope(projectId: string): Promise<Scope> {
   else if (z) buildings = ((await supabase.from("buildings").select("id").eq("zone_id", z.id)).data ?? []).map((r) => r.id);
   const label = [ph?.name || ph?.code, z?.name || z?.code, b?.name || b?.code].filter(Boolean).join(" · ");
   return { phase: ph?.id ?? "", zone: z?.id ?? "", building: b?.id ?? "", buildings, label };
-}
+});
 
 // Narrows a query on a table with phase_id (and, if it has one, building_id).
 export function scoped<Q>(q: Q, s: Scope, opts: { building?: boolean; zone?: boolean } = {}): Q {

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export { acts, type Profile } from "@/lib/access";
@@ -25,14 +26,15 @@ export type QueueItem = {
 
 export type Department = { code: string; name: string; name_ar: string; sort: number };
 
-export async function getMe() {
+// Once per request, however many layouts and pages ask.
+export const getMe = cache(async function getMe() {
   const supabase = await createClient();
   const { data: claims } = await supabase.auth.getClaims();
   const id = claims?.claims?.sub;
   if (!id) return null;
   const { data } = await supabase.from("profiles").select("*").eq("id", id).single();
   return data as Profile | null;
-}
+});
 
 // Overdue first, then the longest waiting.
 export function sortQueue(items: QueueItem[]) {
