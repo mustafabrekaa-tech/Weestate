@@ -2,6 +2,8 @@ import type { CBuilding, COpt, CUnit } from "@/components/UnitConsole";
 import { fetchAll, loadConstruction } from "@/lib/construction";
 import type { Scope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
+import { readGeo } from "@/lib/geo";
+import type { EarthProject } from "@/components/EarthMap";
 
 type Supa = Awaited<ReturnType<typeof createClient>>;
 type Row = {
@@ -14,7 +16,7 @@ const ALL: Scope = { phase: "", zone: "", building: "", buildings: [], label: ""
 
 // Everything the unit console needs for one project.
 export async function loadConsole(supabase: Supa, project: string) {
-  const [c, rows, { data: p }, { data: phases }, { data: zones }, { data: buildings }] = await Promise.all([
+  const [c, rows, { data: p }, { data: phases }, { data: zones }, { data: buildings }, { data: all }] = await Promise.all([
     loadConstruction(supabase, project, ALL),
     fetchAll<Row>((a, b) => supabase.from("units")
       .select("id, code, unit_type, phase_id, zone_id, building_id, floor, status, handover_stage, handover_stage_at, priority, delivery_date, target_date, area_m2, plan_poly")
@@ -23,6 +25,7 @@ export async function loadConsole(supabase: Supa, project: string) {
     supabase.from("phases").select("id, code, name").eq("project_id", project).order("code"),
     supabase.from("zones").select("id, code, name").eq("project_id", project).order("code"),
     supabase.from("buildings").select("id, code, name, zone_id, phase_id, floors").eq("project_id", project).order("code"),
+    supabase.from("projects").select("id, name, lat, lng, plan_image, plan_w, plan_h, plan_geo").not("lat", "is", null).order("name"),
   ]);
   const units: CUnit[] = rows.map((r) => ({
     id: r.id, code: r.code, type: r.unit_type ?? "", phase: r.phase_id, zone: r.zone_id, building: r.building_id, floor: r.floor,
@@ -35,7 +38,14 @@ export async function loadConsole(supabase: Supa, project: string) {
     if (m) stagePct[u.id] = c.stages.map((s) => m.get(s.id) ?? 0);
   }
   const plan = p?.plan_image && p.plan_w && p.plan_h ? { image: p.plan_image as string, w: Number(p.plan_w), h: Number(p.plan_h) } : null;
+  // Every project the person can see, so the satellite map can show them together and fly between them.
+  const earth: EarthProject[] = (all ?? []).filter((x) => x.lat != null && x.lng != null).map((x) => ({
+    id: x.id, name: x.name, lat: Number(x.lat), lng: Number(x.lng), href: `/projects/${x.id}/console?view=earth`,
+    plan: x.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
+    geo: readGeo(x.plan_geo),
+  }));
   return {
+    earth,
     units,
     stagePct,
     stages: c.stages.map((s) => ({ id: s.id, name: s.name })),

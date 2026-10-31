@@ -8,13 +8,13 @@ export type Pin = { id: string; lat: number; lng: number; label: string; sub?: s
 
 type Base = "satellite" | "hybrid" | "map";
 
-const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+export const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
 const CAIRO: [number, number] = [31.35, 30.03];
 
 // Satellite imagery, labels, street map, terrain heights and building
 // footprints, all keyless. Layers are switched on and off rather than
 // rebuilding the style, so the camera stays where it is.
-const STYLE: StyleSpecification = {
+export const STYLE: StyleSpecification = {
   version: 8,
   projection: { type: "globe" },
   sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 6, 0.4, 10, 0] },

@@ -2,7 +2,8 @@ import Link from "next/link";
 import { Kpis, type ProjectStatus } from "@/components/Kpis";
 import { ProjectDashboard } from "@/components/ProjectDashboard";
 import { QueueTable } from "@/components/QueueTable";
-import { SiteMap } from "@/components/SiteMap";
+import { EarthMap, type EarthProject } from "@/components/EarthMap";
+import { readGeo } from "@/lib/geo";
 import { getMe, sortQueue, type QueueItem, acts } from "@/lib/data";
 import { createClient } from "@/lib/supabase/server";
 
@@ -10,23 +11,25 @@ export default async function Overview({ searchParams }: { searchParams: Promise
   const { project } = await searchParams;
   const supabase = await createClient();
   const me = await getMe();
-  const [{ data: projects }, { data: queue }] = await Promise.all([
+  const [{ data: projects }, { data: queue }, { data: plans }] = await Promise.all([
     supabase.from("project_status").select("*").eq("company_id", me?.company_id ?? "").order("name"),
     supabase.from("work_queue").select("*").eq("company_id", me?.company_id ?? ""),
+    supabase.from("projects").select("id, plan_image, plan_w, plan_h, plan_geo").eq("company_id", me?.company_id ?? ""),
   ]);
   const list = (projects ?? []) as ProjectStatus[];
   const items = sortQueue((queue ?? []) as QueueItem[]);
   const late = items.filter((q) => q.overdue);
-  const pins = list
+  const planOf = new Map((plans ?? []).map((x) => [x.id as string, x]));
+  const earth: EarthProject[] = list
     .filter((p) => p.lat != null && p.lng != null)
-    .map((p) => ({
-      id: p.id,
-      lat: p.lat!,
-      lng: p.lng!,
-      label: p.name,
-      sub: `SPI ${p.spi ?? "–"} · CPI ${p.cpi ?? "–"} · ${p.unit_count} units`,
-      href: `/projects/${p.id}`,
-    }));
+    .map((p) => {
+      const x = planOf.get(p.id);
+      return {
+        id: p.id, name: p.name, lat: p.lat!, lng: p.lng!, href: `/projects/${p.id}/console?view=earth`,
+        plan: x?.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
+        geo: readGeo(x?.plan_geo),
+      };
+    });
   const canSetup = acts(me, ["pm", "cost_control"]);
 
   const focus = list.find((p) => p.id === project) ?? list[0];
@@ -57,8 +60,11 @@ export default async function Overview({ searchParams }: { searchParams: Promise
 
       {list.length > 0 && (
         <section className="we-panel">
-          <div className="we-panel__head"><h2>On the map</h2><small>{list.length} project{list.length === 1 ? "" : "s"}</small></div>
-          <SiteMap pins={pins} height={360} />
+          <div className="we-panel__head">
+            <h2>On the map</h2>
+            <small>{list.length} project{list.length === 1 ? "" : "s"} · click a name to fly there · <Link href={`/projects/${focus!.id}/console?view=earth`}>open with units</Link></small>
+          </div>
+          <EarthMap projects={earth} height={520} />
         </section>
       )}
 

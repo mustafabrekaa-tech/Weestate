@@ -1088,3 +1088,27 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
   html.we-nav-hidden .we-nav { display: none; }
 }
 .we-uc__scale button:nth-child(2) { width: auto; padding: 0 8px; font: 600 12px/1 var(--font-sans); }
+
+/* Satellite map with the masterplan laid on it */
+.we-earth { position: relative; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--line); background: #1d2328; min-height: 360px; }
+.we-earth__canvas { position: absolute !important; inset: 0; width: 100%; height: 100%; }
+.we-earth__bar { position: absolute; top: 10px; left: 10px; right: 56px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 2; pointer-events: none; }
+.we-earth__bar > * { pointer-events: auto; }
+.we-earth__bar .we-seg { background: rgba(17,24,39,.82); border-radius: 8px; padding: 3px; display: inline-flex; gap: 2px; }
+.we-earth__bar .we-seg button { border: 0; background: none; color: #e5e7eb; font: 500 12.5px/1 var(--font-sans); padding: 7px 10px; border-radius: 6px; cursor: pointer; }
+.we-earth__bar .we-seg button:hover { background: rgba(255,255,255,.12); }
+.we-earth__bar .we-seg button.is-on { background: var(--gold); color: #111; }
+.we-earth__slider { display: inline-flex; align-items: center; gap: 8px; background: rgba(17,24,39,.82); color: #e5e7eb; font: 500 12.5px/1 var(--font-sans); padding: 6px 10px; border-radius: 8px; }
+.we-earth__slider input { width: 90px; accent-color: var(--gold); }
+.we-earth__go { height: 32px; border-radius: 8px; border: 0; background: rgba(17,24,39,.82); color: #e5e7eb; padding: 0 8px; font: 500 12.5px var(--font-sans); }
+.we-earth__tag { border: 0; background: #111827; color: #fff; font: 600 12px/1 var(--font-sans); padding: 6px 9px; border-radius: 6px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.35); position: relative; }
+.we-earth__tag::after { content: ""; position: absolute; left: 50%; bottom: -5px; margin-left: -5px; border: 5px solid transparent; border-bottom: 0; border-top-color: #111827; }
+.we-earth__tag:hover { background: var(--gold); color: #111; }
+.we-earth__align { position: absolute; left: 10px; bottom: 34px; z-index: 2; background: #fff; border-radius: 10px; padding: 12px 14px; width: min(340px, calc(100% - 20px)); display: grid; gap: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.we-earth__align label { display: grid; grid-template-columns: 52px 1fr 64px; align-items: center; gap: 8px; font-size: 13px; }
+.we-earth__align label span { font: 500 12px var(--font-mono); text-align: right; }
+.we-earth__align input[type=range] { accent-color: var(--gold); }
+.we-earth__note, .we-earth__msg { position: absolute; left: 50%; transform: translateX(-50%); bottom: 34px; z-index: 2; background: rgba(17,24,39,.85); color: #fff; font-size: 12.5px; padding: 7px 12px; border-radius: 8px; white-space: nowrap; max-width: calc(100% - 20px); overflow: hidden; text-overflow: ellipsis; }
+.we-earth__msg { bottom: auto; top: 56px; cursor: pointer; background: #14532d; }
+.we-earth__msg.is-err { background: #9f1239; }
+.we-uc__body .we-earth { height: var(--uc-h) !important; }

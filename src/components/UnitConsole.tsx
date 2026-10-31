@@ -7,7 +7,14 @@ import { HANDOVER, HANDOVER_BY_KEY } from "@/lib/handover";
 import { UNIT_STATUS } from "@/lib/site";
 import { createClient } from "@/lib/supabase/client";
 import { ActionForm } from "./ActionForm";
+import type { EarthProject } from "./EarthMap";
+import type { PlanGeo } from "@/lib/geo";
 import { TileMap } from "./TileMap";
+
+const EarthMap = dynamic(() => import("./EarthMap").then((m) => m.EarthMap), {
+  ssr: false,
+  loading: () => <div className="we-uc__loading">Loading the satellite map…</div>,
+});
 
 const Plan3D = dynamic(() => import("./Plan3D").then((m) => m.Plan3D), {
   ssr: false,
@@ -22,7 +29,7 @@ export type CUnit = {
 export type COpt = { id: string; label: string };
 export type CBuilding = { id: string; code: string; name: string; zone: string | null; phase: string | null; floors: number };
 export type Mode = "handover" | "construction" | "sales" | "delivery";
-type View = "map" | "plan" | "tiles" | "3d";
+export type View = "map" | "plan" | "tiles" | "3d" | "earth";
 type Bucket = { key: string; label: string; color: string };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -75,8 +82,10 @@ function toggle<T>(set: Set<T>, v: T) {
 
 export function UnitConsole({
   projectId, units, phases, zones, buildings, stages, stagePct, plan, initialMode = "handover", initialView,
-  can, actions, title = "Unit console", height = 620, initial, initialQ = "", initialStage,
+  can, actions, title = "Unit console", height = 620, initial, initialQ = "", initialStage, earth = [], saveGeo,
 }: {
+  earth?: EarthProject[];
+  saveGeo?: (g: PlanGeo) => Promise<ActionResult>;
   projectId: string;
   units: CUnit[];
   phases: COpt[];
@@ -87,7 +96,7 @@ export function UnitConsole({
   plan: { image: string; w: number; h: number } | null;
   initialMode?: Mode;
   initialView?: View;
-  can: { handover: boolean; build: boolean; dates: boolean; priority: boolean };
+  can: { handover: boolean; build: boolean; dates: boolean; priority: boolean; align?: boolean };
   actions: {
     handover: (prev: ActionResult, f: FormData) => Promise<ActionResult>;
     construction: (prev: ActionResult, f: FormData) => Promise<ActionResult>;
@@ -102,7 +111,7 @@ export function UnitConsole({
 }) {
   const hasPlan = !!plan && units.some((u) => u.poly);
   const [mode, setMode] = useState<Mode>(initialMode);
-  const [view, setView] = useState<View>(initialView && (initialView === "tiles" || hasPlan) ? initialView : hasPlan ? "map" : "tiles");
+  const [view, setView] = useState<View>(initialView && (initialView === "tiles" || hasPlan) && (initialView !== "earth" || earth.some((p) => p.id === projectId)) ? initialView : hasPlan ? "map" : "tiles");
   const [scale, setScale] = useState(1);
   const [full, setFull] = useState(false);
   const [side, setSide] = useState(true);
@@ -265,6 +274,7 @@ export function UnitConsole({
             {hasPlan && <button type="button" aria-pressed={view === "map"} className={view === "map" ? "is-on" : ""} onClick={() => setView("map")}>Tile map</button>}
             {hasPlan && <button type="button" aria-pressed={view === "plan"} className={view === "plan" ? "is-on" : ""} onClick={() => setView("plan")}>Masterplan</button>}
             {hasPlan && <button type="button" aria-pressed={view === "3d"} className={view === "3d" ? "is-on" : ""} onClick={() => setView("3d")}>3D</button>}
+            {earth.some((p) => p.id === projectId) && <button type="button" aria-pressed={view === "earth"} className={view === "earth" ? "is-on" : ""} onClick={() => setView("earth")}>Satellite</button>}
             <button type="button" aria-pressed={view === "tiles"} className={view === "tiles" ? "is-on" : ""} onClick={() => setView("tiles")}>List</button>
           </div>
           <button type="button" className="we-btn we-btn--secondary we-btn--sm" onClick={() => setSide((v) => !v)}>{side ? "Hide panel" : "Show panel"}</button>
@@ -338,7 +348,7 @@ export function UnitConsole({
                 <button type="button" onClick={() => setScale((v) => Math.min(2.5, +(v + 0.1).toFixed(2)))} aria-label="Larger">+</button>
               </span>
             )}
-            <span className="we-uc__hint">{view === "map" ? "Click units · click a building or cluster name to take all of it" : view === "plan" ? "Drag to move · scroll to zoom · Shift-drag to box-select · Ctrl-click to add" : view === "3d" ? "Drag to orbit · right-drag to pan · scroll to zoom · click a unit" : "Click tiles · Ctrl-click to add · click a building name to take all of it"}</span>
+            <span className="we-uc__hint">{view === "map" ? "Click units · click a building or cluster name to take all of it" : view === "plan" ? "Drag to move · scroll to zoom · Shift-drag to box-select · Ctrl-click to add" : view === "3d" ? "Drag to orbit · right-drag to pan · scroll to zoom · click a unit" : view === "earth" ? "Units on the satellite · Ctrl-drag to tilt · click a unit · project names fly there" : "Click tiles · Ctrl-click to add · click a building name to take all of it"}</span>
           </div>
           {view === "map" && plan && (
             <TileMap units={units} buildings={buildings} phases={phases} zones={zones} plan={plan} matches={matches} sel={sel} colorOf={colorOf}
@@ -350,6 +360,10 @@ export function UnitConsole({
           )}
           {view === "3d" && plan && (
             <Plan3D image={plan.image} w={plan.w} h={plan.h} units={units} buildings={buildings} matches={matches} sel={sel} colorOf={colorOf} onPick={pick} />
+          )}
+          {view === "earth" && (
+            <EarthMap projects={earth} focusId={projectId} units={units} matches={matches} sel={sel} colorOf={colorOf} onPick={pick}
+              canAlign={can.align} saveGeo={saveGeo} height="var(--uc-h)" />
           )}
           {view === "tiles" && (
             <TileView units={units} buildings={buildings} phases={phases} zones={zones} matches={matches} sel={sel} colorOf={colorOf} onPick={pick} onMany={selectMany} />

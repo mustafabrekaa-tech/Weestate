@@ -1,13 +1,13 @@
-import { bulkConstruction, bulkDelivery, bulkHandover, bulkPriority } from "@/app/(app)/projects/[id]/actions";
+import { bulkConstruction, bulkDelivery, bulkHandover, bulkPriority, savePlanGeo } from "@/app/(app)/projects/[id]/actions";
 import { loadConsole } from "@/lib/console";
 import { acts, getMe } from "@/lib/data";
 import { getScope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
-import { type Mode, UnitConsole } from "./UnitConsole";
+import { type Mode, UnitConsole, type View } from "./UnitConsole";
 
 // The unit console for one project, loaded on the server.
 export async function ConsoleSection({ projectId, mode, view, title, height, q, stage }: {
-  projectId: string; mode?: Mode; view?: "map" | "plan" | "tiles" | "3d"; title?: string; height?: number; q?: string; stage?: string;
+  projectId: string; mode?: Mode; view?: View; title?: string; height?: number; q?: string; stage?: string;
 }) {
   const supabase = await createClient();
   const [data, me, scope] = await Promise.all([loadConsole(supabase, projectId), getMe(), getScope(projectId)]);
@@ -28,7 +28,9 @@ export async function ConsoleSection({ projectId, mode, view, title, height, q, 
         build: acts(me, ["site", "tech_office", "quality", "pm", "cost_control"]),
         dates: acts(me, ["pm", "cost_control", "handover", "sales"]),
         priority: acts(me, ["pm", "handover", "quality", "site", "tech_office", "cost_control"]),
+        align: acts(me, ["pm", "cost_control"]),
       }}
+      saveGeo={savePlanGeo.bind(null, projectId)}
       actions={{
         handover: bulkHandover.bind(null, projectId),
         construction: bulkConstruction.bind(null, projectId),

@@ -513,3 +513,15 @@ export async function bulkPriority(id: string, ids: string[], on: boolean): Prom
   if (error) return { error: error.message };
   return done(id, "console", on ? `Marked ${data} as priority.` : `Took ${data} off the priority list.`);
 }
+
+// Where the masterplan sits on the satellite map. Only planning (pm, cost control) can save it; RLS checks that.
+export async function savePlanGeo(id: string, g: { lng: number; lat: number; mpp: number; rot: number }): Promise<ActionResult> {
+  if (![g.lng, g.lat, g.mpp, g.rot].every((n) => typeof n === "number" && Number.isFinite(n)) || g.mpp <= 0) return { error: "That position is not valid." };
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("projects").update({ plan_geo: g }).eq("id", id).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Only project management or planning can move the plan." };
+  revalidatePath(`/projects/${id}`, "layout");
+  revalidatePath("/");
+  return { ok: "Plan position saved." };
+}
