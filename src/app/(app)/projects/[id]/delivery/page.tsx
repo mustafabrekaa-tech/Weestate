@@ -15,6 +15,7 @@ import { getScope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
 import { importHandover, setDeliveryDates } from "../actions";
 import { HandoverJsonImport } from "@/components/HandoverJsonImport";
+import { StagePipeline } from "@/components/StagePipeline";
 
 export const metadata: Metadata = { title: "Handover" };
 
@@ -113,7 +114,6 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
   const inPipe = HANDOVER.slice(1, 8).reduce((s2, h) => s2 + hoCount(h.key), 0);
   const firstBusy = ["qc_approved", "snagging_qc", "submitted_qc", "snagging_con", "submitted_consultant", "submitted", "initial"].find((k) => hoCount(k) > 0) ?? "not_started";
   const sel = stageParam && HANDOVER_BY_KEY[stageParam] ? stageParam : firstBusy;
-  const selRows = rows.filter((r) => hoKey(r.id) === sel).sort((a, b) => (stageOf.get(a.id)?.handover_stage_at ?? "").localeCompare(stageOf.get(b.id)?.handover_stage_at ?? "") || a.code.localeCompare(b.code));
   const zoneName = (v: string | null) => (zones ?? []).find((z) => z.id === v)?.code ?? "–";
   const cols: Col[] = [];
   {
@@ -163,21 +163,18 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
         <div className="we-kcard"><span className="we-kcard__label">Due in 90 days</span><span className="we-kcard__value">{soon.length}</span><span className="we-kcard__note">{withDates} units have a contract date</span></div>
       </div>
 
-      <section className="we-panel">
-        <div className="we-panel__head"><h2>Handover pipeline</h2><small>click a stage to list its units</small></div>
-        <div className="we-scrollx">
-          <div className="we-pipe2">
-            {HANDOVER.map((h, i) => (
-              <Link key={h.key} href={`?stage=${h.key}`} scroll={false} aria-current={h.key === sel ? "true" : undefined}>
-                <i style={{ background: h.color }} />
-                <b>{hoCount(h.key)}</b>
-                <span>{h.label}</span>
-                <small>{i < HANDOVER.length - 1 ? `Next: ${OWNER[h.key]!.split(" ")[0]}` : "Finished"}</small>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <StagePipeline
+        base={base}
+        initial={sel}
+        stages={HANDOVER.map((h, i) => ({ key: h.key, label: h.label, color: h.color, count: hoCount(h.key), owner: OWNER[h.key]!,
+          next: i < HANDOVER.length - 1 ? `Next: ${OWNER[h.key]!.split(" ")[0]}` : "Finished" }))}
+        rows={Object.fromEntries(HANDOVER.map((h) => [h.key, rows
+          .filter((r) => hoKey(r.id) === h.key)
+          .sort((x, y) => (stageOf.get(x.id)?.handover_stage_at ?? "").localeCompare(stageOf.get(y.id)?.handover_stage_at ?? "") || x.code.localeCompare(y.code))
+          .slice(0, 150)
+          .map((r) => ({ id: r.id, code: r.code, cluster: zoneName(r.zone_id), type: r.unit_type ?? "", since: date(stageOf.get(r.id)?.handover_stage_at ?? null),
+            contract: date(r.delivery_date), late: !!(r.delivery_date && r.delivery_date < today && h.key !== "client_delivered"), built: Math.round(r.pct) }))]))}
+      />
 
       {canMove && (
         <details className="we-card">
@@ -188,39 +185,6 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
           />
         </details>
       )}
-
-      <section className="we-panel">
-        <div className="we-panel__head">
-          <div>
-            <h2>{HANDOVER_BY_KEY[sel]!.label} <span className="we-help">· {selRows.length} units</span></h2>
-            <div className="we-help">{OWNER[sel]}</div>
-          </div>
-          {selRows.length > 0 && <Link className="we-btn we-btn--primary we-btn--sm" href={`${base}/console?stage=${sel}`}>Select them on the map</Link>}
-        </div>
-        <div className="we-table-wrap" style={{ maxHeight: 420 }}>
-          <table className="we-table">
-            <thead><tr><th>Unit</th><th>Cluster</th><th>Type</th><th>In this stage since</th><th>Contract date</th><th>Built</th><th></th></tr></thead>
-            <tbody>
-              {selRows.length === 0 && <tr><td colSpan={7} className="we-empty">No unit is in this stage today.</td></tr>}
-              {selRows.slice(0, 150).map((r) => {
-                const isLate = r.delivery_date && r.delivery_date < today && sel !== "client_delivered";
-                return (
-                  <tr key={r.id}>
-                    <td className="we-mono">{r.code}</td>
-                    <td>{zoneName(r.zone_id)}</td>
-                    <td>{r.unit_type}</td>
-                    <td className="we-mono">{date(stageOf.get(r.id)?.handover_stage_at ?? null)}</td>
-                    <td>{isLate ? <span className="we-chip we-chip--overdue">Late · {date(r.delivery_date)}</span> : <span className="we-mono">{date(r.delivery_date)}</span>}</td>
-                    <td className="we-mono">{Math.round(r.pct)}%</td>
-                    <td style={{ textAlign: "right" }}><Link className="we-link" href={`${base}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {selRows.length > 150 && <p className="we-help" style={{ margin: 0 }}>Showing 150 of {selRows.length}. Select them on the map to see and move them all.</p>}
-      </section>
 
       <div className="we-dash">
         <section className="we-panel we-span-6">
