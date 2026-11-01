@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { ActionResult } from "@/lib/data";
+import { WorkbookImporter } from "./WorkbookImporter";
 import { downloadTemplate, IMPORTS, linksFromRows, mapRows, parseCsv, parseMspXml, parseXer, templateCsv, type ImportKind } from "@/lib/imports";
 
 const CHUNK = 1000;
@@ -15,6 +16,8 @@ export function Importer({
   kinds: ImportKind[];
   initial?: string;
 }) {
+  // Everything in one workbook by default; one sheet at a time when a kind was asked for.
+  const [mode, setMode] = useState<"book" | "one">(initial ? "one" : "book");
   const [kind, setKind] = useState<ImportKind>(kinds.includes(initial as ImportKind) ? (initial as ImportKind) : kinds[0]!);
   const [rows, setRows] = useState<Record<string, unknown>[]>([]);
   const [note, setNote] = useState<ActionResult>(null);
@@ -82,8 +85,18 @@ export function Importer({
 
   const href = `data:text/csv;charset=utf-8,${encodeURIComponent(templateCsv(kind))}`;
 
+  const toggle = (
+    <div className="we-seg we-seg--light" role="tablist" aria-label="How to import">
+      <button type="button" role="tab" aria-selected={mode === "book"} className={mode === "book" ? "is-on" : ""} onClick={() => setMode("book")}>Everything in one workbook</button>
+      <button type="button" role="tab" aria-selected={mode === "one"} className={mode === "one" ? "is-on" : ""} onClick={() => setMode("one")}>One sheet at a time</button>
+    </div>
+  );
+
+  if (mode === "book") return <div className="we-stack">{toggle}<WorkbookImporter save={save} /></div>;
+
   return (
     <div className="we-stack">
+      {toggle}
       <div className="we-import-kinds">
         {[...new Set(kinds.map((k) => IMPORTS[k].area))].map((area) => (
           <div key={area} className="we-import-kinds__group">

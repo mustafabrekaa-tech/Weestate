@@ -152,5 +152,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:svg|mjs|png|webp|ico|jpg|jpeg|gif|avif|glb|gltf)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|robots.txt|sitemap.xml|.*\\.(?:svg|mjs|png|webp|ico|jpg|jpeg|gif|avif|glb|gltf|xlsx)$).*)"],
 };

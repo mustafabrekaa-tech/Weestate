@@ -1215,3 +1215,4 @@ a.we-btn--secondary { color: var(--ink); text-decoration: none; }
 .we-map__cross::before, .we-map__cross::after { content: ""; position: absolute; background: #fff; box-shadow: 0 0 0 1px rgba(38,49,58,.6); }
 .we-map__cross::before { left: 13px; top: 0; width: 2px; height: 28px; }
 .we-map__cross::after { top: 13px; left: 0; height: 2px; width: 28px; }
+div.we-stack > .we-seg--light { align-self: flex-start; }

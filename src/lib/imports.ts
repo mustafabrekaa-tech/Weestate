@@ -398,3 +398,69 @@ export async function downloadTemplate(kind: ImportKind) {
     ] as never,
   ).toFile(`weestate-${kind}-template.xlsx`);
 }
+
+// One workbook for everything: one sheet per kind, saved in this order so
+// phases and buildings exist before units, suppliers before contracts, and so on.
+export const WORKBOOK_ORDER: ImportKind[] = [
+  "phases", "buildings", "unit_types", "units", "cost_codes", "budget", "suppliers", "contracts", "payments",
+  "activities", "progress", "boq", "customers", "assets",
+];
+
+const SHEET_NAMES: Partial<Record<ImportKind, string[]>> = {
+  unit_types: ["types", "unit type"],
+  cost_codes: ["cost code", "cbs"],
+  budget: ["budgets", "budget lines"],
+  activities: ["schedule", "activities", "programme", "program"],
+  progress: ["progress updates", "progress update"],
+  suppliers: ["suppliers", "contractors", "vendors"],
+  payments: ["payments", "payments out"],
+  customers: ["customers", "owners", "clients"],
+  assets: ["assets", "equipment"],
+};
+
+// Which import a sheet belongs to, from its name ("Units", "04 Units", "unit_types"...).
+export function kindOfSheet(name: string): ImportKind | null {
+  const n = norm(name).replace(/^\d+\s*/, "");
+  for (const k of WORKBOOK_ORDER) {
+    const names = [k, k.replace(/_/g, " "), IMPORTS[k].name, ...(SHEET_NAMES[k] ?? [])].map(norm);
+    if (names.includes(n)) return k;
+  }
+  return null;
+}
+
+// The blank workbook: a read-me sheet, then one sheet per kind with its headings.
+export async function downloadWorkbook() {
+  const { default: writeXlsxFile } = await import("write-excel-file/browser");
+  const b = (value: string) => ({ value, fontWeight: "bold" as const });
+  const head = (value: string) => ({ value, fontWeight: "bold" as const, backgroundColor: "#F7EFDC" });
+  const readMe = [
+    [{ value: "WE-estate import workbook", fontWeight: "bold" as const, fontSize: 14 }],
+    [{ value: "Fill in the sheets you have and leave the rest empty. Upload the whole file on Import from Excel › Everything in one workbook." }],
+    [{ value: "Sheets are saved in the order below, so phases and buildings exist before units, and suppliers before contracts." }],
+    [{ value: "Rows with the same code are updated, not duplicated, so you can upload the same workbook again after changes." }],
+    [{ value: "Dates as real Excel dates or yyyy-mm-dd. Columns marked * must be filled. Don't rename the sheets." }],
+    [],
+    [b("Sheet"), b("What goes in it"), b("Who usually fills it"), b("Must have")],
+    ...WORKBOOK_ORDER.map((k) => [
+      { value: IMPORTS[k].name }, { value: IMPORTS[k].help ?? IMPORTS[k].area }, { value: IMPORTS[k].who },
+      { value: IMPORTS[k].columns.filter((c) => c.required).map((c) => c.label).join(", ") },
+    ]),
+    [],
+    [b("Sheet"), b("Column"), b("Needed"), b("Example"), b("Also accepted as")],
+    ...WORKBOOK_ORDER.flatMap((k) => IMPORTS[k].columns.map((c) => [
+      { value: IMPORTS[k].name }, { value: c.label }, { value: c.required ? "Yes" : "" },
+      { value: c.example == null ? "" : String(c.example) }, { value: c.aliases.join(", ") },
+    ])),
+  ];
+  await writeXlsxFile(
+    [
+      { data: readMe, sheet: "Read me", columns: [{ width: 26 }, { width: 70 }, { width: 34 }, { width: 30 }, { width: 40 }] },
+      ...WORKBOOK_ORDER.map((k) => ({
+        data: [IMPORTS[k].columns.map((c) => head(c.label + (c.required ? " *" : "")))],
+        sheet: IMPORTS[k].name.slice(0, 31),
+        columns: IMPORTS[k].columns.map((c) => ({ width: Math.max(14, c.label.length + 4) })),
+        stickyRowsCount: 1,
+      })),
+    ] as never,
+  ).toFile("weestate-import-workbook.xlsx");
+}
