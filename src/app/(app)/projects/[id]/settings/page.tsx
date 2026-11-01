@@ -48,6 +48,14 @@ export default async function SetupPage({ params }: { params: Promise<{ id: stri
         </ol>
       </section>
 
+      <section className="we-card we-row" style={{ justifyContent: "space-between" }}>
+        <div>
+          <h2 style={{ margin: 0 }}>Masterplan</h2>
+          <span className="we-help">Upload the masterplan image and mark the units on it. This turns on the Tile map, Masterplan and 3D views in Units and map.</span>
+        </div>
+        <Link className="we-btn we-btn--secondary" href={`${base}/masterplan`}>Set up the masterplan</Link>
+      </section>
+
       <section className="we-card">
         <h2>Project and location</h2>
         <ActionForm action={saveSettings.bind(null, id)} className="we-stack">

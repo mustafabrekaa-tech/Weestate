@@ -1,3 +1,4 @@
+import type { MapModel } from "@/components/MapModels";
 import type { CBuilding, COpt, CUnit } from "@/components/UnitConsole";
 import { fetchAll, loadConstruction } from "@/lib/construction";
 import type { Scope } from "@/lib/scope";
@@ -17,7 +18,7 @@ const ALL: Scope = { phase: "", zone: "", building: "", buildings: [], label: ""
 
 // Everything the unit console needs for one project.
 export async function loadConsole(supabase: Supa, project: string) {
-  const [c, rows, { data: p }, { data: phases }, { data: zones }, { data: buildings }, { data: all }] = await Promise.all([
+  const [c, rows, { data: p }, { data: phases }, { data: zones }, { data: buildings }, { data: all }, { data: blds }, { data: mods }] = await Promise.all([
     loadConstruction(supabase, project, ALL),
     fetchAll<Row>((a, b) => supabase.from("units")
       .select("id, code, unit_type, phase_id, zone_id, building_id, floor, status, handover_stage, handover_stage_at, priority, delivery_date, target_date, area_m2, plan_poly")
@@ -27,6 +28,8 @@ export async function loadConsole(supabase: Supa, project: string) {
     supabase.from("zones").select("id, code, name").eq("project_id", project).order("code"),
     supabase.from("buildings").select("id, code, name, zone_id, phase_id, floors").eq("project_id", project).order("code"),
     supabase.from("projects").select("id, name, lat, lng, plan_image, plan_w, plan_h, plan_geo").not("lat", "is", null).order("name"),
+    supabase.from("buildings").select("footprint, floors, floor_height_m, base_m").eq("project_id", project).not("footprint", "is", null).limit(5000),
+    supabase.from("project_models").select("id, url, placement").eq("project_id", project).not("placement", "is", null),
   ]);
   const units: CUnit[] = rows.map((r) => ({
     id: r.id, code: r.code, type: r.unit_type ?? "", phase: r.phase_id, zone: r.zone_id, building: r.building_id, floor: r.floor,
@@ -44,6 +47,14 @@ export async function loadConsole(supabase: Supa, project: string) {
     id: x.id, name: x.name, lat: Number(x.lat), lng: Number(x.lng), href: `/projects/${x.id}/console?view=earth`,
     plan: x.plan_image && x.plan_w && x.plan_h ? { image: x.plan_image, w: Number(x.plan_w), h: Number(x.plan_h) } : null,
     geo: readGeo(x.plan_geo),
+    // This project's buildings and placed 3D models on the satellite view.
+    ...(x.id === project ? {
+      blocks: ((blds ?? []) as { footprint: [number, number][]; floors: number | null; floor_height_m: number | null; base_m: number | null }[]).map((b) => {
+        const b0 = Number(b.base_m ?? 0);
+        return { ring: b.footprint, base: b0, top: b0 + Math.max(1, b.floors ?? 1) * Number(b.floor_height_m || 3.2) };
+      }),
+      models: ((mods ?? []) as MapModel[]).map((m) => ({ id: m.id, url: m.url, placement: m.placement })),
+    } : {}),
   }));
   const tileLayout = (p?.tile_layout as TileLayout | null) ?? null;
   return {

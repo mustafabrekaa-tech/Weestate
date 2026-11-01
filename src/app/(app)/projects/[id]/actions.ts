@@ -566,3 +566,21 @@ export async function importHandover(id: string, rows: Record<string, unknown>[]
   const r = data as { units: number; events: number };
   return done(id, "delivery", `${r.units} units and ${r.events} history entries saved.`);
 }
+
+// A new masterplan image for the project. Its alignment on the satellite map starts again around the pin.
+export async function setPlanImage(id: string, url: string, w: number, h: number): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("projects").update({ plan_image: url, plan_w: Math.round(w), plan_h: Math.round(h), plan_geo: null }).eq("id", id).select("id");
+  if (error) return { error: denied(error, "Project management") };
+  if (!data?.length) return { error: "Only Project management can change the masterplan." };
+  return done(id, "masterplan", "Masterplan saved.");
+}
+
+// Where units sit on the masterplan, in image pixels. A null poly clears the mark.
+export async function savePlanPolys(id: string, items: { id: string; poly: [number, number][] | null }[]): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("set_plan_polys", { p_project: id, p_items: items });
+  if (error) return { error: error.message };
+  revalidatePath(`/projects/${id}`, "layout");
+  return { ok: `${data} units saved.` };
+}

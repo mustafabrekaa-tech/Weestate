@@ -59,6 +59,7 @@ export const SECTIONS: Section[] = [
   { slug: "units", label: "Units and sales", title: "Units and sales", icon: "sales", purpose: "Every unit with its type, area, price and sales status." },
   { slug: "documents", label: "Documents", title: "Documents", icon: "doc", purpose: "Every workflow document of this project: certificates, variations, purchases, sales and handovers." },
   { slug: "structure", label: "Phases and buildings", title: "Phases, clusters and buildings", icon: "layers", purpose: "How the project is split into phases, clusters, buildings and units." },
+  { slug: "masterplan", label: "Masterplan", title: "Masterplan", icon: "map", purpose: "Upload the masterplan and mark where each unit is. The unit console's Tile map, Masterplan and 3D views are drawn from it." },
   { slug: "import", label: "Import from Excel", title: "Import from Excel", icon: "upload", purpose: "Upload budget, schedule, units and other data from a spreadsheet or a P6 file." },
   { slug: "settings", label: "Project setup", title: "Project setup", icon: "gear", purpose: "Name, location, dates, the masterplan and who works on this project." },
 ];

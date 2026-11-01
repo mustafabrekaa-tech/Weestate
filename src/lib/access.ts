@@ -41,7 +41,7 @@ export const MODULES: { key: string; label: string; help: string }[] = [
 // Project tabs and workflow documents by section.
 export const TAB_MODULE: Record<string, string> = {
   budget: "planning", schedule: "planning", cashflow: "planning", boq: "construction", contracts: "construction",
-  units: "sales", site: "site", import: "import", construction: "construction", delivery: "handover",
+  units: "sales", site: "site", masterplan: "site", import: "import", construction: "construction", delivery: "handover",
 };
 export const DOC_MODULE: Record<string, string> = {
   budget_revision: "planning", schedule_update: "planning", payment_certificate: "construction", variation_order: "construction",
