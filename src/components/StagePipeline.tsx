@@ -57,7 +57,7 @@ export function StagePipeline({ stages, rows, initial, base }: { stages: PipeSta
                   <td className="we-mono">{r.since}</td>
                   <td>{r.late ? <span className="we-chip we-chip--overdue">Late · {r.contract}</span> : <span className="we-mono">{r.contract}</span>}</td>
                   <td className="we-mono">{r.built}%</td>
-                  <td style={{ textAlign: "right" }}><Link className="we-link" href={`${base}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
+                  <td style={{ textAlign: "right" }}><Link prefetch={false} className="we-link" href={`${base}/console?q=${encodeURIComponent(r.code)}`}>Open on map</Link></td>
                 </tr>
               ))}
             </tbody>
