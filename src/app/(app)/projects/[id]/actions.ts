@@ -557,3 +557,12 @@ export async function deleteProject(id: string, _: ActionResult, form: FormData)
   redirect("/?deleted=1");
   return null;
 }
+
+// Handover stages and history from a delivery-console JSON export.
+export async function importHandover(id: string, rows: Record<string, unknown>[], replace: boolean): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("import_handover", { p_project: id, p_rows: rows, p_replace: replace });
+  if (error) return { error: error.message };
+  const r = data as { units: number; events: number };
+  return done(id, "delivery", `${r.units} units and ${r.events} history entries saved.`);
+}

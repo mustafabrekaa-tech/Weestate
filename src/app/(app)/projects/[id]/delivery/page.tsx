@@ -13,7 +13,8 @@ import { acts, getMe } from "@/lib/data";
 import { date, pct } from "@/lib/format";
 import { getScope } from "@/lib/scope";
 import { createClient } from "@/lib/supabase/server";
-import { setDeliveryDates } from "../actions";
+import { importHandover, setDeliveryDates } from "../actions";
+import { HandoverJsonImport } from "@/components/HandoverJsonImport";
 
 export const metadata: Metadata = { title: "Handover" };
 
@@ -52,12 +53,17 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
     supabase.from("zones").select("id, code, name").eq("project_id", id).order("code"),
     supabase.from("buildings").select("id, code, name").eq("project_id", id).order("code"),
     fetchAll<Handover>((a, b) => supabase.from("unit_handovers").select("unit_id, status, scheduled_at, handed_over_at").eq("project_id", id).range(a, b)),
-    fetchAll<{ id: string; handover_stage: string; handover_stage_at: string | null }>((a, b) =>
-      supabase.from("units").select("id, handover_stage, handover_stage_at").eq("project_id", id).range(a, b)),
+    fetchAll<{ id: string; code: string; phase_id: string | null; handover_stage: string; handover_stage_at: string | null }>((a, b) =>
+      supabase.from("units").select("id, code, phase_id, handover_stage, handover_stage_at").eq("project_id", id).range(a, b)),
   ]);
   const stageOf = new Map(stagesNow.map((r) => [r.id, r]));
   const { units, unitPct } = c;
   const canPlan = acts(me, ["pm", "cost_control", "handover", "sales"]);
+  const canMove = acts(me, ["pm", "handover", "quality", "site", "tech_office"]);
+  async function saveHandover(rows: Record<string, unknown>[], replace: boolean) {
+    "use server";
+    return importHandover(id, rows, replace);
+  }
   const phaseName = (v: string | null) => (phases ?? []).find((p) => p.id === v)?.name || (phases ?? []).find((p) => p.id === v)?.code || "No phase";
 
   const ho = new Map<string, Handover>();
@@ -172,6 +178,16 @@ export default async function DeliveryPage({ params, searchParams }: { params: P
           </div>
         </div>
       </section>
+
+      {canMove && (
+        <details className="we-card">
+          <summary><b>Import handover from a JSON file</b> <span className="we-help">· stages, due dates, priority and history saved by the unit delivery console</span></summary>
+          <HandoverJsonImport
+            units={stagesNow.map((u) => ({ id: u.id, code: u.code, phase: (phases ?? []).find((p) => p.id === u.phase_id)?.code ?? null }))}
+            save={saveHandover}
+          />
+        </details>
+      )}
 
       <section className="we-panel">
         <div className="we-panel__head">
