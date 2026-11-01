@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { Importer } from "@/components/Importer";
 import { getProjects } from "@/lib/data";
 import { IMPORT_ORDER } from "@/lib/imports";
@@ -10,7 +11,9 @@ export const metadata: Metadata = { title: "Import from Excel" };
 export default async function ImportHub({ searchParams }: { searchParams: Promise<{ project?: string; kind?: string }> }) {
   const { project, kind } = await searchParams;
   const projects = await getProjects();
-  const current = projects.find((p) => p.id === project) ?? projects[0];
+  // The project asked for, else the one picked in the top bar, else the first.
+  const last = (await cookies()).get("we-project")?.value;
+  const current = projects.find((p) => p.id === project) ?? projects.find((p) => p.id === last) ?? projects[0];
 
   async function save(k: string, rows: Record<string, unknown>[]) {
     "use server";

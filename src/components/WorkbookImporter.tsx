@@ -168,7 +168,7 @@ const LABEL: Record<Part["state"], string> = {
 };
 
 const CHIP: Record<Part["state"], string> = {
-  ready: "we-chip--active", empty: "we-chip--draft", missing: "we-chip--overdue", unknown: "we-chip--draft",
+  ready: "we-chip--waiting", empty: "we-chip--draft", missing: "we-chip--overdue", unknown: "we-chip--draft",
   saving: "we-chip--waiting", saved: "we-chip--done", failed: "we-chip--overdue",
 };
 
