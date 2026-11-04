@@ -23,8 +23,11 @@ const FLOOR_M = 3.3;
 // The satellite map with each project's masterplan laid on it, the units drawn on top
 // in the console's colours, and a tour from project to project.
 export function EarthMap({
-  projects, focusId, units, matches, sel, colorOf, onPick, canAlign, saveGeo, height = 480,
+  projects, focusId, units, matches, sel, colorOf, onPick, canAlign, saveGeo, height = 480, flyId, onProject,
 }: {
+  // Fly to this project whenever it changes ("" shows them all); onProject hears clicks on a project label.
+  flyId?: string;
+  onProject?: (id: string) => void;
   projects: EarthProject[];
   focusId?: string;
   units?: CUnit[];
@@ -56,6 +59,8 @@ export function EarthMap({
   alignRef.current = align;
   const pickRef = useRef(onPick);
   pickRef.current = onPick;
+  const projRef = useRef(onProject);
+  projRef.current = onProject;
 
   const unitsGeo = useMemo(() => {
     if (!units || !focus?.plan || !geo) return null;
@@ -118,7 +123,7 @@ export function EarthMap({
           el.type = "button";
           el.className = "we-earth__tag";
           el.textContent = p.name;
-          el.onclick = () => flyTo(p);
+          el.onclick = () => { if (projRef.current) projRef.current(p.id); else flyTo(p); };
           new ml.Marker({ element: el, anchor: "bottom" }).setLngLat([p.lng, p.lat]).addTo(m);
         }
         // Buildings outlined on the 3D site map stand up here too, with any placed 3D models.
@@ -194,6 +199,22 @@ export function EarthMap({
     const g = geoOf(p);
     mapRef.current?.flyTo({ center: g ? [g.lng, g.lat] : [p.lng, p.lat], zoom: 16.3, pitch: 50, bearing: -15, duration: 3500, essential: true });
   }
+
+  // Follow the project picked outside the map (the reports dashboard).
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!ready || !map || flyId === undefined) return;
+    const p = projects.find((x) => x.id === flyId);
+    if (p) { flyTo(p); return; }
+    if (projects.length > 1) {
+      import("maplibre-gl").then((ml) => {
+        const b = new ml.LngLatBounds([projects[0]!.lng, projects[0]!.lat], [projects[0]!.lng, projects[0]!.lat]);
+        projects.forEach((x) => b.extend([x.lng, x.lat]));
+        map.fitBounds(b, { padding: 80, maxZoom: 13, pitch: 0, bearing: 0, duration: 1800 });
+      });
+    } else if (projects[0]) flyTo(projects[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, flyId]);
 
   // A tour: fly to each project in turn and circle it, like the flythrough.
   const tourRef = useRef(0);

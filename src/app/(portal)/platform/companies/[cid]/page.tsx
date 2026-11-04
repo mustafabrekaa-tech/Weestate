@@ -6,7 +6,8 @@ import { getBrand } from "@/lib/brand";
 import { date } from "@/lib/format";
 import { DOMAIN_STATE, STATUS, type Workspace } from "@/lib/portal";
 import { createClient } from "@/lib/supabase/server";
-import { checkAddress, saveAddress, saveShortName, saveWorkspace, staffResetMfa, staffResetPassword } from "../../actions";
+import { MODULES } from "@/lib/access";
+import { checkAddress, saveAddress, saveModules, saveShortName, saveWorkspace, staffResetMfa, staffResetPassword } from "../../actions";
 import { Select } from "@/components/Select";
 
 export const metadata: Metadata = { title: "Company" };
@@ -16,12 +17,14 @@ type Person = { id: string; email: string; full_name: string; department: string
 export default async function CompanyPage({ params }: { params: Promise<{ cid: string }> }) {
   const { cid } = await params;
   const supabase = await createClient();
-  const [{ data }, { data: people }, brand, { data: plans }] = await Promise.all([
+  const [{ data }, { data: people }, brand, { data: plans }, { data: mod }] = await Promise.all([
     supabase.rpc("portal_companies"),
     supabase.rpc("portal_people", { p_company: cid }),
     getBrand(),
     supabase.from("plans").select("code, name").order("sort"),
+    supabase.from("companies").select("modules_off").eq("id", cid).maybeSingle(),
   ]);
+  const off = new Set<string>((mod?.modules_off ?? []) as string[]);
   const w = ((data ?? []) as Workspace[]).find((x) => x.id === cid);
   if (!w) notFound();
   const sub = `${w.slug}.${brand.rootDomain}`;
@@ -117,6 +120,22 @@ export default async function CompanyPage({ params }: { params: Promise<{ cid: s
           </div>
         </section>
       </div>
+
+      <section className="we-card we-stack">
+        <h3 className="we-h3" style={{ margin: 0 }}>Modules <small>{MODULES.length - MODULES.filter((m) => off.has(m.key)).length} of {MODULES.length} on</small></h3>
+        <span className="we-help">Untick a module to switch it off for everyone at {w.name}, admins included: it leaves their menu, project tabs and the reports dashboard. Their admin can still hide the modules that are on from single departments.</span>
+        <ActionForm action={saveModules.bind(null, w.id, MODULES.map((m) => m.key))} className="we-stack">
+          <div className="we-modgrid">
+            {MODULES.map((m) => (
+              <label key={m.key} className="we-modgrid__item">
+                <input type="checkbox" name={`m:${m.key}`} defaultChecked={!off.has(m.key)} />
+                <span><b>{m.label}</b><br /><small className="we-help">{m.help}</small></span>
+              </label>
+            ))}
+          </div>
+          <div><button className="we-btn we-btn--primary we-btn--sm">Save modules</button></div>
+        </ActionForm>
+      </section>
 
       <section className="we-stack">
         <div className="we-row" style={{ justifyContent: "space-between" }}>

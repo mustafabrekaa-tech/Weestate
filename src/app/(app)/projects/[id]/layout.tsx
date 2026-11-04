@@ -8,6 +8,7 @@ import { ProjectTabs } from "@/components/ProjectTabs";
 import { ScopeBar } from "@/components/ScopeBar";
 import { getMe } from "@/lib/data";
 import { getScope, scoped } from "@/lib/scope";
+import { getHidden } from "@/lib/modules";
 import { createClient } from "@/lib/supabase/server";
 
 const statusLabel: Record<string, string> = {
@@ -24,12 +25,12 @@ export default async function ProjectLayout({ children, params }: { children: Re
     getScope(id),
   ]);
   if (!p) notFound();
-  const [{ data: phases }, { data: zones }, { data: buildings }, { count }, { data: hiddenRows }] = await Promise.all([
+  const [{ data: phases }, { data: zones }, { data: buildings }, { count }, { hidden }] = await Promise.all([
     supabase.from("phases").select("id, code, name").eq("project_id", id).order("code"),
     supabase.from("zones").select("id, code, name, phase_id").eq("project_id", id).order("code"),
     supabase.from("buildings").select("id, code, name, phase_id, zone_id").eq("project_id", id).order("code"),
     scoped(supabase.from("units").select("id", { count: "exact", head: true }).eq("project_id", id), scope, { zone: true, building: true }),
-    me?.is_admin ? Promise.resolve({ data: [] }) : supabase.from("hidden_modules").select("module").eq("company_id", me?.company_id ?? "").eq("department", me?.department ?? ""),
+    getHidden(),
   ]);
   const slug = ((await headers()).get("x-pathname") ?? "").split("/")[3] ?? "";
   const sec = SECTION_BY_SLUG[slug];
@@ -47,7 +48,7 @@ export default async function ProjectLayout({ children, params }: { children: Re
         )}
       </div>
       {sec?.tips && <PageTips id={sec.slug || "overview"} steps={sec.tips} />}
-      <ProjectTabs base={base} hidden={(hiddenRows ?? []).map((r) => r.module as string)} />
+      <ProjectTabs base={base} hidden={[...hidden]} />
       <ScopeBar
         projectId={id}
         phases={phases ?? []}

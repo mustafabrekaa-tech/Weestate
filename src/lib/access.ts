@@ -25,8 +25,10 @@ export function acts(me: Profile | null | undefined, codes: string[]) {
 }
 
 
-// Sections of the app an admin can hide from a department.
+// Sections of the app. WE-estate staff switch them on or off per company;
+// a company admin can then hide the ones that are on from a department.
 export const MODULES: { key: string; label: string; help: string }[] = [
+  { key: "reports", label: "Reports dashboard", help: "Portfolio, project and phase reports on the map" },
   { key: "planning", label: "Budget and planning", help: "Budget, schedule and cash flow" },
   { key: "construction", label: "Construction", help: "BOQ, contracts, certificates and variations" },
   { key: "procurement", label: "Procurement", help: "Purchase requests and suppliers" },

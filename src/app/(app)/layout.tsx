@@ -12,6 +12,7 @@ import { DOC_MODULE, TAB_MODULE } from "@/lib/access";
 import { brandStyle, getBrand } from "@/lib/brand";
 import { getMe, type Department, type QueueItem, acts } from "@/lib/data";
 import { docBySlug, docByType } from "@/lib/docs";
+import { getHidden } from "@/lib/modules";
 import { createClient } from "@/lib/supabase/server";
 
 // Which part of the business each workflow belongs to, for the menu.
@@ -29,17 +30,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (!me) redirect("/login");
 
   const supabase = await createClient();
-  const [{ data: depts }, { data: queue }, { data: projects }, { data: company }, brand, { data: hiddenRows }, { data: ws }] = await Promise.all([
+  const [{ data: depts }, { data: queue }, { data: projects }, { data: company }, brand, { hidden, off }, { data: ws }] = await Promise.all([
     supabase.from("departments").select("*").order("sort"),
     supabase.from("work_queue").select("doc_type, department, overdue, company_id").eq("company_id", me.company_id ?? ""),
     supabase.from("projects").select("id, name, slug").eq("company_id", me.company_id ?? "").order("name"),
     supabase.from("companies").select("name, logo_url, brand_color, brand_colors, require_mfa").eq("id", me.company_id ?? "").maybeSingle(),
     getBrand(),
-    supabase.from("hidden_modules").select("module").eq("company_id", me.company_id ?? "").eq("department", me.department ?? ""),
+    getHidden(),
     supabase.rpc("my_workspace").maybeSingle<{ status: string; trial_ends: string | null }>(),
   ]);
-  // Admins see everything; everyone else loses the sections hidden from their department.
-  const hidden = new Set(me.is_admin || me.is_platform_admin ? [] : (hiddenRows ?? []).map((r) => r.module as string));
   const suspended = ws?.status === "suspended" && !me.is_platform_admin;
 
   // Opening a hidden section by its address shows a note instead of the page.
@@ -49,6 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     seg[1] === "docs" ? DOC_MODULE[docBySlug(seg[2] ?? "")?.type ?? ""]
     : seg[1] === "projects" && seg[3] ? TAB_MODULE[seg[3]]
     : seg[1] === "import" ? "import"
+    : seg[1] === "reports" || seg[1] === "portfolio" ? "reports"
     : seg[1] === "directory" ? (seg[2] === "suppliers" ? "procurement" : "sales")
     : seg[1] === "departments" && seg[2] !== me.department ? "departments"
     : undefined;
@@ -145,7 +145,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <AppNav
           top={[
             { href: "/", label: "Dashboard", icon: "chart" },
-            { href: "/portfolio", label: "Portfolio", icon: "projects" },
+            ...(hidden.has("reports") ? [] : [{ href: "/reports", label: "Reports", icon: "projects" as const }]),
             { href: "/my-work", label: "Waiting on me", count: mine.length, late: mine.some((q) => q.overdue), icon: "inbox" },
           ]}
           projects={list}
@@ -179,8 +179,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </section>
           ) : blocked ? (
             <section className="we-card we-stack" style={{ maxWidth: 560 }}>
-              <h1 style={{ margin: 0 }}>Not part of your work</h1>
-              <p style={{ margin: 0 }}>Your admin has kept this section out of your department&apos;s menu. Ask them if you need it.</p>
+              <h1 style={{ margin: 0 }}>{off.has(section!) ? "Not switched on" : "Not part of your work"}</h1>
+              <p style={{ margin: 0 }}>{off.has(section!)
+                ? `This module isn't switched on for ${company?.name ?? "your company"}. Ask ${brand.appName} to add it to your plan.`
+                : "Your admin has kept this section out of your department's menu. Ask them if you need it."}</p>
               <div><Link className="we-btn we-btn--secondary we-btn--sm" href="/">Back to the dashboard</Link></div>
             </section>
           ) : (

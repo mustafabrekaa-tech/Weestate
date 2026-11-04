@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { ActionForm } from "@/components/ActionForm";
 import { MODULES } from "@/lib/access";
 import { getMe, type Department } from "@/lib/data";
+import { getHidden } from "@/lib/modules";
 import { createClient } from "@/lib/supabase/server";
 import { saveVisibility } from "../actions";
 
@@ -14,11 +15,14 @@ export default async function Permissions() {
   const me = await getMe();
   if (!me?.is_admin || !me.company_id) redirect("/");
   const supabase = await createClient();
-  const [{ data: depts }, { data: hidden }, { data: people }] = await Promise.all([
+  const [{ data: depts }, { data: hidden }, { data: people }, { off: companyOff }] = await Promise.all([
     supabase.from("departments").select("*").order("sort"),
     supabase.from("hidden_modules").select("department, module").eq("company_id", me.company_id),
     supabase.from("profiles").select("department").eq("company_id", me.company_id),
+    getHidden(),
   ]);
+  // Modules not switched on for the company don't appear here at all.
+  const mods = MODULES.filter((m) => !companyOff.has(m.key));
   const dl = (depts ?? []) as Department[];
   const off = new Set((hidden ?? []).map((h) => `${h.department}:${h.module}`));
   const count = (code: string) => (people ?? []).filter((p) => p.department === code).length;
@@ -38,20 +42,20 @@ export default async function Permissions() {
           <p className="we-help" style={{ margin: 0 }}>
             Untick a section to take it out of a department&apos;s menu and project tabs. Admins always see everything.
           </p>
-          <ActionForm action={saveVisibility.bind(null, me.company_id, dl.map((d) => d.code), MODULES.map((m) => m.key))} className="we-stack">
+          <ActionForm action={saveVisibility.bind(null, me.company_id, dl.map((d) => d.code), mods.map((m) => m.key))} className="we-stack">
             <div className="we-table-wrap">
               <table className="we-table we-matrix">
                 <thead>
                   <tr>
                     <th>Department</th>
-                    {MODULES.map((m) => <th key={m.key} title={m.help}>{m.label}</th>)}
+                    {mods.map((m) => <th key={m.key} title={m.help}>{m.label}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {dl.map((d) => (
                     <tr key={d.code}>
                       <th scope="row"><div className="we-title">{d.name}</div><div className="we-meta">{count(d.code)} people</div></th>
-                      {MODULES.map((m) => (
+                      {mods.map((m) => (
                         <td key={m.key}>
                           <input type="checkbox" name={`${d.code}:${m.key}`} defaultChecked={!off.has(`${d.code}:${m.key}`)} aria-label={`${d.name} sees ${m.label}`} />
                         </td>

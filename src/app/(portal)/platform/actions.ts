@@ -93,6 +93,17 @@ export async function saveWorkspace(companyId: string, _: ActionResult, form: Fo
   return { ok: s(form, "status") === "suspended" ? "Saved. The workspace is paused: its people can sign in but can't open anything." : "Saved." };
 }
 
+// Which modules a company has. Unticked ones disappear for everyone in it.
+export async function saveModules(companyId: string, keys: string[], _: ActionResult, form: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const off = keys.filter((k) => form.get(`m:${k}`) !== "on");
+  const { data, error } = await supabase.from("companies").update({ modules_off: off }).eq("id", companyId).select("id");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Only WE-estate staff can change this." };
+  revalidatePath("/", "layout");
+  return { ok: off.length ? `Saved. ${off.length} module${off.length > 1 ? "s" : ""} switched off for this company.` : "Saved. Every module is on." };
+}
+
 // Changes a workspace's name.weestate.app address.
 export async function saveShortName(companyId: string, _: ActionResult, form: FormData): Promise<ActionResult> {
   const supabase = await createClient();
